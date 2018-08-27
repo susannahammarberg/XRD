@@ -55,7 +55,7 @@ p.scans.scan01.data.vertical_shift =  [-1,-1,0,0,0,  0,0,2,1,0,  1,1,1,0,-1,  -1
 p.scans.scan01.data.horizontal_shift =  [3,2,0,1,2,  3,4,3,4,5,  5,6,6,5,6,  5,4,7,8,8,  8,8,10,11,12,  11,12,12,11,12,  12,11,12,13,13,  14,15,14,14,14,  13,15,16,15,14,  17,19,18,18,17,   17]
             # InGaP = [116:266,234:384]
             # InP = [116:266,80:230]
-p.scans.scan01.data.detector_roi_indices = [116,266,80,230]  # [116:266,80:230]    # this one should not be needed since u have shape and center...
+p.scans.scan01.data.detector_roi_indices = [116,266,234,348]  #[116,266,80,230]  #    # this one should not be needed since u have shape and center...
 
 p.scans.scan01.illumination = u.Param()
 p.scans.scan01.illumination.aperture = u.Param() 

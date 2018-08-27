@@ -9,7 +9,7 @@ import numpy as np
 p = u.Param()
 p.run = 'XRD_InP'
 
-sample = 'JWX33_NW2'; scans = range(192, 200+1)+range(205, 222+1) # list((192,207,222)) # range(192, 200+1)+range(205, 222+1)  #list((192,203,206))   list((192,207,210))
+sample = 'JWX33_NW2'; scans = [192, 193] #range(192, 200+1)+range(205, 222+1) # list((192,207,222)) # range(192, 200+1)+range(205, 222+1)  #list((192,203,206))   list((192,207,210))
 
 p.data_type = "single"   #or "double"
 # for verbose output
@@ -42,6 +42,7 @@ p.scans.scan01.data.shape = 150#512#150#60#290#128
 #added now
 p.scans.scan01.data.psize = 55e-6
 p.scans.scan01.data.energy = 9.49
+p.scans.scan01.data.distance = 1
 # this is arbitrary, usually it calc this automatically. OBS they mean the center on the raw detector image
 p.scans.scan01.data.center = None # x y 
 #p.scans.scan01.data.center = (225,350)  # (512-170,245)  #(75,75) #(200,270) #(512-170,245)     #(512-170,245) for 192_   #Seems like its y than x
