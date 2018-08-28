@@ -120,6 +120,11 @@ extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
 # save masked diffraction patterns as 'a'
 data = P.diff.storages.values()[0].data*(P.mask.storages.values()[0].data[0])#        (storage_data[:,scan_COM,:,:])
 
+# shape paramter to make code readable
+shape = p.scans.scan01.data.shape
+nbr_rot = len(scans)
+
+# plot the sum of all used diffraction images
 plt.figure()
 plt.imshow(np.log10(sum(sum(data))),cmap='jet', interpolation='none')
 
@@ -135,8 +140,8 @@ def bright_field(data,x,y):
     return photons
 
 # do BF for all rotations
-brightfield = np.zeros((data.shape[1], nbr_rows, nbr_cols))
-for jj in range(0,data.shape[1]):
+brightfield = np.zeros((len(scans), nbr_rows, nbr_cols))
+for jj in range(0,len(scans)):
     brightfield[jj] = bright_field(data[:,jj,:,:],nbr_cols,nbr_rows)
     #Normalize each image ( so that i can plot a better 3D image)
     #brightfield[jj] = brightfield[jj] / brightfield[jj].max()
@@ -145,7 +150,7 @@ for jj in range(0,data.shape[1]):
 def plot_BF2d():
     interval=10 #plotting interval
     #plot every something 2d bright fields
-    for ii in range(0,data.shape[1],interval):
+    for ii in range(0,len(scans),interval):
         plt.figure()
         plt.imshow(brightfield[ii], cmap='jet', interpolation='none', extent=extent_motorpos) 
         plt.title('Single image from bright field %d'%ii)  
@@ -185,7 +190,6 @@ def make_movie():
 #make_movie()
     
     
-nbr_rot = len(scans)
 
 
 def COM2d(data,nbr_cols,nbr_rows):
@@ -237,9 +241,9 @@ def do_plot_COM2d():
 # input here is 4d matrix with [nbr_diffpatterns][nbr_rotations][nbr_pixels_x][nbr_pixels_y]
 def COM_voxels(data,nbr_cols,nbr_rows):
     # define a vector with length of the length of roi on the detector
-    roix = np.linspace(1, data.shape[2], data.shape[2])
+    roix = np.linspace(1, shape, shape )
     ## define a vector with length of the height of roi on the detector
-    roiy = np.linspace(1,data.shape[3],data.shape[3])
+    roiy = np.linspace(1,shape, shape)
     roiz = np.linspace(1,nbr_rot,nbr_rot)    
     # meshgrids for center of mass calculations
     Z, X, Y = np.meshgrid(roix,roiz,roiy)
@@ -353,7 +357,7 @@ plot3ddata(data[623])
 
 # define q1 q2 q3 and make them global. 
 def def_q_vectors():
-    global dq1, dq2, dq3
+    global dq1, dq2, dq3, q_abs
     dq1=0.00027036386641665936    #1/angstrom    dq1=dq2   dthete=0.02 (checked gonphi) (see calculate smapling conditions script)
     # lattice constant Ga(0.51In(0.49)P
     #lattice_constant_a = 5.653E-10 
@@ -371,7 +375,7 @@ def def_q_vectors():
     global q3, q1, q2
     
     q3 = np.linspace(-dq3*len(scans)/2+q_abs, dq3*len(scans)/2+q_abs, len(scans))    
-    q1 = np.linspace(-dq1*p.scans.scan01.data.shape/2, dq1*p.scans.scan01.data.shape/2, p.scans.scan01.data.shape)
+    q1 = np.linspace(-dq1*shape/2, dq1*shape/2, shape)
     q2 = np.copy(q1)
 def_q_vectors()
     
@@ -381,20 +385,20 @@ def plot3d_singleBraggpeak(data):
     plt.figure()
     plt.suptitle('Single position Bragg peak')
     plt.subplot(221)
-    plt.imshow((abs((data[data.shape[0]/2,:,:]))), cmap='jet', interpolation='none', extent=[ -dq1*p.scans.scan01.data.shape/2, dq1*p.scans.scan01.data.shape/2, -dq1*p.scans.scan01.data.shape/2, dq1*p.scans.scan01.data.shape/2]) 
+    plt.imshow((abs((data[data.shape[0]/2,:,:]))), cmap='jet', interpolation='none', extent=[ -dq1*shape/2, dq1*shape/2, -dq1*shape/2, dq1*shape/2]) 
     plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_2$ $ (\AA ^{-1}$)') 
     plt.colorbar()
     # OBS FIRST AXIS IS Y
     plt.subplot(222)
     #plt.title('-axis')
-    plt.imshow(abs(data[:,data.shape[1]/2,:]), cmap='jet', interpolation='none', extent=[  -dq1*p.scans.scan01.data.shape/2, dq1*p.scans.scan01.data.shape/2, -dq3*a.shape[1]/2+q_abs, dq3*a.shape[1]/2+q_abs]) 
+    plt.imshow(abs(data[:,nbr_rot/2,:]), cmap='jet', interpolation='none', extent=[  -dq1*shape/2, dq1*shape/2, -dq3*nbr_rot/2+q_abs, dq3*nbr_rot/2+q_abs]) 
     plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_3$ $ (\AA ^{-1}$)') 
     plt.colorbar()
     plt.subplot(223)
     #plt.title('-axis')
-    plt.imshow((abs(data[:,:,data.shape[2]/2])), cmap='jet', interpolation='none', extent=[ -dq1*p.scans.scan01.data.shape/2, dq1*p.scans.scan01.data.shape/2,-dq3*a.shape[1]/2+q_abs, dq3*a.shape[1]/2+q_abs]) 
+    plt.imshow((abs(data[:,:,shape/2])), cmap='jet', interpolation='none', extent=[ -dq1*shape/2, dq1*shape/2,-dq3*nbr_rot/2+q_abs, dq3*nbr_rot/2+q_abs]) 
     plt.xlabel('$q_2$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_3$ $ (\AA ^{-1}$)') 
     plt.colorbar()
