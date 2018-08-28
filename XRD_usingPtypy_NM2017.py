@@ -513,7 +513,7 @@ plot_compare2()
 
 # its not so good its a bit wired
 # input here is 4d matrix with [nbr_diffpatterns][nbr_rotations][nbr_pixels_x][nbr_pixels_y]
-def COM_voxels_reciproc():
+def COM_voxels_reciproc(data):
     # define a vector with length of the length of roi on the detector
     #roix = np.linspace(1, data.shape[2], data.shape[2])
     ## define a vector with length of the height of roi on the detector
@@ -537,9 +537,9 @@ def COM_voxels_reciproc():
 #            threshold = 3000   #dont know how to set this threshold. but should be when the data it is summung is just some single photon ocunts on each image
 #            if sum(sum(sum(data[index]))) > threshold:
     
-    COM_x = sum(sum(sum(hhhh.data[0]* Qx)))/sum(sum(sum(hhhh.data[0])))
-    COM_y = sum(sum(sum(hhhh.data[0]* Qy)))/sum(sum(sum(hhhh.data[0])))
-    COM_z = sum(sum(sum(hhhh.data[0]* Qz)))/sum(sum(sum(hhhh.data[0])))
+    COM_x = sum(sum(sum(data* Qx)))/sum(sum(sum(data)))
+    COM_y = sum(sum(sum(data* Qy)))/sum(sum(sum(data)))
+    COM_z = sum(sum(sum(data* Qz)))/sum(sum(sum(data)))
 #            else:
 #                COM_hor[row,col] = 13.616534672254996      # == np.mean(COM_hor) without the if-sats
 #                COM_ver[row,col] = 64.117565383940558
@@ -559,39 +559,49 @@ def COM_voxels_reciproc():
     print COM_x, COM_y, COM_z
     return COM_x, COM_y, COM_z
 
-COM_x, COM_y, COM_z = COM_voxels_reciproc()
 
-# start of XRD_analysis():
-position_idx = 0
-XRD_x = np.zeros((nbr_rows,nbr_cols))
-XRD_z = np.zeros((nbr_rows,nbr_cols))
-XRD_y = np.zeros((nbr_rows,nbr_cols))
 
 # loop through all scanning postitions and move the 3D Bragg peak from the 
-# natural to the orthogonal coordinate system
-for row in range(0,nbr_rows):
-    for col in range(0,nbr_cols):
+# natural to the orthogonal coordinate system (to be able to calculate COM)
+# Calculate COM for every peak - this gives the XRD matrices
+def XRD_analysis():
+    position_idx = 0
+    XRD_x = np.zeros((nbr_rows,nbr_cols))
+    XRD_z = np.zeros((nbr_rows,nbr_cols))
+    XRD_y = np.zeros((nbr_rows,nbr_cols))
+    
+
+    for row in range(0,nbr_rows):
+        for col in range(0,nbr_cols):
+            
+            
+            data_orth_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, copy_P.diff.storages.values()[0], input_space='reciprocal',
+                         input_system='natural', keep_dims=True,
+                         layer=position_idx)         # layer is the first col in copy_P.diff.storages.values()[0]
+            
+            # do the 3d COM analysis to find the orthogonal reciprocal space coordinates
+            #TODO what units comes out of this function?
+            COM_x, COM_y, COM_z = COM_voxels_reciproc(data_orth_coord.data[0])
+            
+            # insert coordinate in reciprocal space maps 
+            XRD_x[row,col] = COM_x
+            XRD_z[row,col] = COM_z
+            XRD_y[row,col] = COM_y
+            
+            position_idx +=1
+            
+            # plot every other 3d peak and print out the postion of the COM analysis
+            #if (position_idx%10=0):
+             #   print 'hej'
+    return XRD_x, XRD_z, XRD_y
+
+XRD_x, XRD_z, XRD_y = XRD_analysis()
         
-        # hhhh here must be called hhhh because that is what the function COM_voxels_reciprc() uses!!!!!
-        hhhh = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, copy_P.diff.storages.values()[0], input_space='reciprocal',
-                     input_system='natural', keep_dims=True,
-                     layer=position_idx)         # layer is the first col in copy_P.diff.storages.values()[0]
-        
-        # do the 3d COM analysis to find the orthogonal reciprocal space coordinates
-        COM_x, COM_y, COM_z = COM_voxels_reciproc()
-        
-        # insert coordinate in reciprocal space maps 
-        XRD_x[row,col] = COM_x
-        XRD_z[row,col] = COM_z
-        XRD_y[row,col] = COM_y
-        
-        position_idx +=1
-        
-#test plot for the coordinate system:
+#test plot for the coordinate system: (only works for the last position, the other peaks are not saved)
 def test_coordShift():
             
     plt.figure()
-    plt.imshow(np.log10(np.sum(data[position_idx-1],axis=2)), cmap='jet', interpolation='none', extent=[ q1[0], q1[-1], q3[0], q3[-1] ])
+    plt.imshow(np.log10(np.sum(data[-1],axis=2)), cmap='jet', interpolation='none', extent=[ q1[0], q1[-1], q3[0], q3[-1] ])
     plt.title('natural')
     plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_3$ $ (\AA ^{-1}$)')
@@ -692,7 +702,7 @@ plot_XRD_polar()
 
 
 plt.figure()
-plt.imshow(2*np.pi/XRD_absq, cmap='jet',interpolation='none',extent=extent_motorpos) # not correct!'
+plt.imshow(2*np.pi/XRD_absq, cmap='jet',interpolation='none',extent=extent_motorpos) 
 plt.ylabel('y [$\mu m$]')
 po = plt.colorbar()
 po.set_label('$d_{hkl}$')
