@@ -5,10 +5,13 @@ import ptypy
 from ptypy.core import Ptycho
 from ptypy import utils as u
 import numpy as np
-p = u.Param()
-p.run = 'XRD_InPGa'
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 
-# input
+
+p = u.Param()
+p.run = 'XRD_InPGa'   # 'XRD_InP'
+
 #sample = 'JWX33_NW2'; #scans = range(192, 200+1)+range(205, 222+1)  #list((192,203,206))   list((192,207,210))
 sample = 'JWX29A_NW1' #; scans =[458,459]
 scans = [458,459,460,461,462,463,464,465,466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
@@ -329,7 +332,7 @@ def numpy2vtk(data,filename,dx=1.0,dy=1.0,dz=1.0,x0=0.0,y0=0.0,z0=0.0):
 #vtk_out = numpy2vtk(KO,'KOtest.vtk')
 #vtk_out = numpy2vtk(np.log10(a[623,:,140:180,170:240]),'single_braggpeak_log.vtk')
 
-
+# general function for plotting central cuts of 3d data
 def plot3ddata(data):
     plt.figure()
     plt.suptitle('Single position Bragg peak')
@@ -346,31 +349,35 @@ def plot3ddata(data):
     plt.imshow((abs(data[:,:,data.shape[2]/2])), cmap='jet', interpolation='none') 
     plt.colorbar()
     
-#plot3ddata(data[623,:,140:180,170:240])
+plot3ddata(data[623])
 
-def plot3d_singleBraggpeak(data):
-    # plots the 'naive' Bragg peak (not skewed coordinates) in a single position in 3dim
+# define q1 q2 q3 and make them global. 
+def def_q_vectors():
+    global dq1, dq2, dq3
     dq1=0.00027036386641665936    #1/angstrom    dq1=dq2   dthete=0.02 (checked gonphi) (see calculate smapling conditions script)
     # lattice constant Ga(0.51In(0.49)P
     #lattice_constant_a = 5.653E-10 
     #d = lattice_constant_a / np.sqrt(3)
     #q_abs = 2*np.pi / d
     
-    energy = 9.7#8.800#9.5   #10.72   #keV    
+    energy = 9.49#8.800#9.5   #10.72   #keV    
     wavelength =  1.23984E-9 / energy     #1.2781875567010311e-10
     theta = 11 # degrees
     
     # AB calculations dq3= np.deg2rad(self.psize[0]) * 4 * np.pi / self.lam * self.sintheta 
     q_abs = 4 * np.pi / wavelength* np.sin(theta*np.pi/180)     *1E-10
+    
     dq3= np.deg2rad(0.02) * q_abs
-    print dq3
-    
     global q3, q1, q2
-    q3 = np.linspace(-dq3*data.shape[1]/2+q_abs, dq3*data.shape[1]/2+q_abs, 51)
     
+    q3 = np.linspace(-dq3*len(scans)/2+q_abs, dq3*len(scans)/2+q_abs, len(scans))    
     q1 = np.linspace(-dq1*p.scans.scan01.data.shape/2, dq1*p.scans.scan01.data.shape/2, p.scans.scan01.data.shape)
     q2 = np.copy(q1)
+def_q_vectors()
     
+# Plot single position 3d bragg peak in 2d cuts
+# plots the 'naive' Bragg peak (not skewed coordinates) in a single position in 3dim   
+def plot3d_singleBraggpeak(data):    
     plt.figure()
     plt.suptitle('Single position Bragg peak')
     plt.subplot(221)
@@ -395,9 +402,6 @@ def plot3d_singleBraggpeak(data):
     
 plot3d_singleBraggpeak(data[451])
 
- 
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 
 def movie_maker2(data, name):
     #figure for animation
@@ -438,7 +442,7 @@ def movie_maker2(data, name):
     ani.save(name +'.mp4', writer="mencoder")    
 #movie_maker2(data[:,22:25],'rot22__InP')
 
-# remove a to save space 
+
  
     
     
@@ -448,7 +452,7 @@ def movie_maker2(data, name):
 # need to create this object first with the relevant parameters
 g = ptypy.core.geometry_bragg.Geo_Bragg(
     psize=[ 0.02   ,  0.000055,  0.000055], 
-    shape=[ 51, 150, 150] ,
+    shape=[ len(scans), 150, 150] ,
     energy=9.49,
     distance=1, 
     theta_bragg=12)
@@ -464,7 +468,7 @@ hhhh = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, copy_P.diff.stora
                          layer=position)
 
 
-plot3d_singleBraggpeak(np.log10(hhhh.data[0]))   #np.log10
+plot3d_singleBraggpeak(np.log10(hhhh.data[0])) 
 
 # also transform the reciprocal vectors how
 tup = q1, q2, q3
@@ -484,7 +488,7 @@ plt.xlabel('$q_x$ $ (\AA ^{-1}$)')   #q1~~qx
 plt.ylabel('$q_z$ $ (\AA ^{-1}$)')     #q3~qz
 plt.colorbar()
 # and 3d cuts
-#plot3d_singleBraggpeak(np.log10(a[position]))
+#plot3d_singleBraggpeak(np.log10(data[position]))
 #plot3d_singleBraggpeak(np.log10(hhhh.data[0]))
 
 # compare sum of all diffraction images from the data in the 'natural' coordinates and the 
@@ -720,7 +724,7 @@ def rocking_curve_plot():
     #458: theta= 13.1    #515 theta = 12.1
     # Is the first point 458? they are sorted according to gonphi, right? In that case it is right.
     # find highest intensity point
-    alla = np.sum(np.sum(np.sum(a,axis=1),axis=1),axis=1)
+    alla = np.sum(np.sum(np.sum(data,axis=1),axis=1),axis=1)
     index_max = np.argmax(alla)
     theta = np.linspace(12.1,13.1,51)    # dthetea =0.02   
     plt.figure(); plt.plot(theta,(np.sum(np.sum(a[index_max],axis=1),axis=1)))
