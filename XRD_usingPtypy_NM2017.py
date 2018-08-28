@@ -467,26 +467,25 @@ copy_P = P     #dont know if this works or if i am just making another reference
 copy_P.diff.storages.values()[0].data = copy_P.diff.storages.values()[0].data * copy_P.mask.storages.values()[0].data
 # Choose postion:
 position = 451
-hhhh = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, copy_P.diff.storages.values()[0], input_space='reciprocal',
+test_shift_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, copy_P.diff.storages.values()[0], input_space='reciprocal',
                          input_system='natural', keep_dims=True,
                          layer=position)
 
 
-plot3d_singleBraggpeak(np.log10(hhhh.data[0])) 
+plot3d_singleBraggpeak(np.log10(test_shift_coord.data[0])) 
 
-# also transform the reciprocal vectors how
+# also transform the reciprocal vectors 
 tup = q1, q2, q3
-llll = ptypy.core.geometry_bragg.Geo_Bragg.transformed_grid(g, tup, input_space='reciprocal',input_system='natural')
-
+q1_orth, q2_orth, q3_orth = ptypy.core.geometry_bragg.Geo_Bragg.transformed_grid(g, tup, input_space='reciprocal',input_system='natural')
 #compare natural and unscewed coordinate systems:
 plt.figure()
-plt.imshow(np.log10(np.sum(data[position],axis=2)), cmap='jet', interpolation='none')#, extent=[ q1[0], q1[-1], q3[0], q3[-1] ])
+plt.imshow(np.log10(np.sum(data[position],axis=2)), cmap='jet', interpolation='none', extent=[ q1[0], q1[-1], q3[0], q3[-1] ])
 plt.title('natural')
 plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   
 plt.ylabel('$q_3$ $ (\AA ^{-1}$)')
 plt.colorbar()
 plt.figure()
-plt.imshow(np.log10(np.sum(hhhh.data[0],axis=2)), cmap='jet', interpolation='none')#, extent=[llll[0][0],llll[0][-1],llll[2][0],llll[2][-1] ])
+plt.imshow(np.log10(np.sum(test_shift_coord.data[0],axis=2)), cmap='jet', interpolation='none',  extent=[ q1_orth[0], q1_orth[-1], q3_orth[0], q3_orth[-1] ])
 plt.title('cartesian')
 plt.xlabel('$q_x$ $ (\AA ^{-1}$)')   #q1~~qx
 plt.ylabel('$q_z$ $ (\AA ^{-1}$)')     #q3~qz
@@ -494,26 +493,11 @@ plt.colorbar()
 # and 3d cuts
 #plot3d_singleBraggpeak(np.log10(data[position]))
 #plot3d_singleBraggpeak(np.log10(hhhh.data[0]))
-
-# compare sum of all diffraction images from the data in the 'natural' coordinates and the 
-# data that should be tranformed to the 'cartesian' coordinate system
-def plot_compare2():
-    plt.figure()
-    plt.suptitle('Single position Bragg peak summed images in 2 coordinate systems')
-    plt.subplot(121)
-    #plt.title('-axis')
-    plt.imshow(sum(data[0]), cmap='jet', interpolation='none') 
-    plt.colorbar()
-    plt.subplot(122)
-    #plt.title('-axis')
-    plt.imshow(sum(abs(hhhh.data[0])), cmap='jet', interpolation='none') 
-    plt.colorbar()
-plot_compare2()
     
 
 # its not so good its a bit wired
 # input here is 4d matrix with [nbr_diffpatterns][nbr_rotations][nbr_pixels_x][nbr_pixels_y]
-def COM_voxels_reciproc(data):
+def COM_voxels_reciproc(data, vect1, vect2, vect3):
     # define a vector with length of the length of roi on the detector
     #roix = np.linspace(1, data.shape[2], data.shape[2])
     ## define a vector with length of the height of roi on the detector
@@ -523,7 +507,8 @@ def COM_voxels_reciproc(data):
     #Z, X, Y = np.meshgrid(roix,roiz,roiy)
     
     # meshgrids for center of mass calculations in reciprocal space
-    Qx,Qz,Qy = np.meshgrid(q1,q3,q2)
+    #TODO why in this order?
+    Qx,Qz,Qy = np.meshgrid(vect1,vect3,vect2)
     
     
 #    COM_hor = np.zeros((nbr_rows,nbr_cols))
@@ -581,7 +566,7 @@ def XRD_analysis():
             
             # do the 3d COM analysis to find the orthogonal reciprocal space coordinates
             #TODO what units comes out of this function?
-            COM_x, COM_y, COM_z = COM_voxels_reciproc(data_orth_coord.data[0])
+            COM_x, COM_y, COM_z = COM_voxels_reciproc(data_orth_coord.data[0], q1_orth, q2_orth, q3_orth)
             
             # insert coordinate in reciprocal space maps 
             XRD_x[row,col] = COM_x
