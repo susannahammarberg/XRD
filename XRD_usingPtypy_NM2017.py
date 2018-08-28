@@ -9,7 +9,7 @@ p = u.Param()
 p.run = 'XRD_InPGa'
 
 # input
-#sample = 'JWX33_NW2'; #scans = list((192,207,222)) # range(192, 200+1)+range(205, 222+1)  #list((192,203,206))   list((192,207,210))
+#sample = 'JWX33_NW2'; #scans = range(192, 200+1)+range(205, 222+1)  #list((192,203,206))   list((192,207,210))
 sample = 'JWX29A_NW1' #; scans =[458,459]
 scans = [458,459,460,461,462,463,464,465,466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
 
@@ -55,7 +55,7 @@ p.scans.scan01.data.vertical_shift =  [-1,-1,0,0,0,  0,0,2,1,0,  1,1,1,0,-1,  -1
 p.scans.scan01.data.horizontal_shift =  [3,2,0,1,2,  3,4,3,4,5,  5,6,6,5,6,  5,4,7,8,8,  8,8,10,11,12,  11,12,12,11,12,  12,11,12,13,13,  14,15,14,14,14,  13,15,16,15,14,  17,19,18,18,17,   17]
             # InGaP = [116:266,234:384]
             # InP = [116:266,80:230]
-p.scans.scan01.data.detector_roi_indices = [116,266,234,348]  #[116,266,80,230]  #    # this one should not be needed since u have shape and center...
+p.scans.scan01.data.detector_roi_indices = [116,266,234,384]  #[116,266,80,230]  #    # this one should not be needed since u have shape and center...
 
 p.scans.scan01.illumination = u.Param()
 p.scans.scan01.illumination.aperture = u.Param() 
@@ -97,8 +97,8 @@ sys.path.insert(0, 'C:/Users/Sanna/Documents/python_utilities') #can I collect a
 from movie_maker import movie_maker
 import h5py
 
-# gather motorpositions for plotting
-scan_name_int = 458   #nbr_scans=649
+# gather motorpositions from first rotation in scan list for plotting
+scan_name_int = scans[0]
 scan_name_string = '%d' %scan_name_int 
 metadata_directory = p.scans.scan01.data.datapath + sample + '.h5'
 metadata = h5py.File( metadata_directory ,'r')
@@ -115,10 +115,10 @@ extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
 #probe = P.probe.storages.values()[0].data[0]#remember, last index [0] is just for probe  
 #obj = P.obj.storages.values()[0].data
 # save masked diffraction patterns as 'a'
-a = P.diff.storages.values()[0].data*(P.mask.storages.values()[0].data[0])#        (storage_data[:,scan_COM,:,:])
+data = P.diff.storages.values()[0].data*(P.mask.storages.values()[0].data[0])#        (storage_data[:,scan_COM,:,:])
 
 plt.figure()
-plt.imshow(np.log10(sum(sum(a))),cmap='jet', interpolation='none')
+plt.imshow(np.log10(sum(sum(data))),cmap='jet', interpolation='none')
 
 #movie_maker(np.log10(abs(probe)))
 
@@ -132,21 +132,17 @@ def bright_field(data,x,y):
     return photons
 
 # do BF for all rotations
-brightfield = np.zeros((a.shape[1], nbr_rows, nbr_cols))
-for jj in range(0,a.shape[1]):
-    brightfield[jj] = bright_field(a[:,jj,:,:],nbr_cols,nbr_rows)
+brightfield = np.zeros((data.shape[1], nbr_rows, nbr_cols))
+for jj in range(0,data.shape[1]):
+    brightfield[jj] = bright_field(data[:,jj,:,:],nbr_cols,nbr_rows)
     #Normalize each image ( so that i can plot a better 3D image)
     #brightfield[jj] = brightfield[jj] / brightfield[jj].max()
 
 
-def make_movie():
- #   movie_maker(brightfield)
-    movie_maker(abs((a[:,0]))) #movie over summation over all position, loop over rotations. to see where there is signal
-#make_movie()
 def plot_BF2d():
-    interval=1 #plotting interval
+    interval=10 #plotting interval
     #plot every something 2d bright fields
-    for ii in range(0,a.shape[1],interval):
+    for ii in range(0,data.shape[1],interval):
         plt.figure()
         plt.imshow(brightfield[ii], cmap='jet', interpolation='none', extent=extent_motorpos) 
         plt.title('Single image from bright field %d'%ii)  
@@ -178,8 +174,14 @@ def bright_field_voxels(data,x,y):
             index += 1
             
     return photons
-brightfield_voxel = bright_field_voxels(a,nbr_cols,nbr_rows)
+brightfield_voxel = bright_field_voxels(data,nbr_cols,nbr_rows)
 
+def make_movie():
+ #   movie_maker(brightfield)
+    movie_maker(abs((data[:,0]))) #movie over summation over all position, loop over rotations. to see where there is signal
+#make_movie()
+    
+    
 nbr_rot = len(scans)
 
 
@@ -217,7 +219,7 @@ def COM2d(data,nbr_cols,nbr_rows):
 
 def do_plot_COM2d():
     for jj in range(0,nbr_rot):
-        l,m,n,o = COM2d(a[:,jj,:,:],nbr_cols,nbr_rows)
+        l,m,n,o = COM2d(data[:,jj,:,:],nbr_cols,nbr_rows)
         COM_hor[jj,:,:]=l
         COM_ver[jj,:,:]=m
         COM_mag[jj,:,:]=n
@@ -268,7 +270,7 @@ def COM_voxels(data,nbr_cols,nbr_rows):
             index += 1
     return COM_hor, COM_ver, COM_rot, COM_mag, COM_ang
 
-COM_hor,COM_ver,COM_rot,COM_mag,not_corr_ang = COM_voxels(a,nbr_cols,nbr_rows)
+COM_hor,COM_ver,COM_rot,COM_mag,not_corr_ang = COM_voxels(data,nbr_cols,nbr_rows)
 
 def plot_COM():
     plt.figure()
@@ -344,7 +346,7 @@ def plot3ddata(data):
     plt.imshow((abs(data[:,:,data.shape[2]/2])), cmap='jet', interpolation='none') 
     plt.colorbar()
     
-#plot3ddata(a[623,:,140:180,170:240])
+#plot3ddata(data[623,:,140:180,170:240])
 
 def plot3d_singleBraggpeak(data):
     # plots the 'naive' Bragg peak (not skewed coordinates) in a single position in 3dim
@@ -364,7 +366,7 @@ def plot3d_singleBraggpeak(data):
     print dq3
     
     global q3, q1, q2
-    q3 = np.linspace(-dq3*a.shape[1]/2+q_abs, dq3*a.shape[1]/2+q_abs, 51)
+    q3 = np.linspace(-dq3*data.shape[1]/2+q_abs, dq3*data.shape[1]/2+q_abs, 51)
     
     q1 = np.linspace(-dq1*p.scans.scan01.data.shape/2, dq1*p.scans.scan01.data.shape/2, p.scans.scan01.data.shape)
     q2 = np.copy(q1)
@@ -391,7 +393,7 @@ def plot3d_singleBraggpeak(data):
     plt.colorbar()
     
     
-plot3d_singleBraggpeak(a[451])
+plot3d_singleBraggpeak(data[451])
 
  
 import matplotlib.pyplot as plt
@@ -434,7 +436,7 @@ def movie_maker2(data, name):
     plt.show()
     # save animation:
     ani.save(name +'.mp4', writer="mencoder")    
-#movie_maker2(a[:,22:25],'rot22__InP')
+#movie_maker2(data[:,22:25],'rot22__InP')
 
 # remove a to save space 
  
@@ -470,7 +472,7 @@ llll = ptypy.core.geometry_bragg.Geo_Bragg.transformed_grid(g, tup, input_space=
 
 #compare natural and unscewed coordinate systems:
 plt.figure()
-plt.imshow(np.log10(np.sum(a[position],axis=2)), cmap='jet', interpolation='none')#, extent=[ q1[0], q1[-1], q3[0], q3[-1] ])
+plt.imshow(np.log10(np.sum(data[position],axis=2)), cmap='jet', interpolation='none')#, extent=[ q1[0], q1[-1], q3[0], q3[-1] ])
 plt.title('natural')
 plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   
 plt.ylabel('$q_3$ $ (\AA ^{-1}$)')
@@ -492,7 +494,7 @@ def plot_compare2():
     plt.suptitle('Single position Bragg peak summed images in 2 coordinate systems')
     plt.subplot(121)
     #plt.title('-axis')
-    plt.imshow(sum(a[0]), cmap='jet', interpolation='none') 
+    plt.imshow(sum(data[0]), cmap='jet', interpolation='none') 
     plt.colorbar()
     plt.subplot(122)
     #plt.title('-axis')
@@ -551,22 +553,22 @@ def COM_voxels_reciproc():
 
 COM_x, COM_y, COM_z = COM_voxels_reciproc()
 
-#def XRD_analysis():
-position_obj = 0
+# start of XRD_analysis():
+position_idx = 0
 XRD_x = np.zeros((nbr_rows,nbr_cols))
 XRD_z = np.zeros((nbr_rows,nbr_cols))
 XRD_y = np.zeros((nbr_rows,nbr_cols))
 
+# loop through all scanning postitions and move the 3D Bragg peak from the 
+# natural to the orthogonal coordinate system
 for row in range(0,nbr_rows):
     for col in range(0,nbr_cols):
         
-        # shift the 3d data (from one position on the wire) from the natural coordinate system to an orthogonal one 
-        #make hhhh global if make this into a function
         # hhhh here must be called hhhh because that is what the function COM_voxels_reciprc() uses!!!!!
         hhhh = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, copy_P.diff.storages.values()[0], input_space='reciprocal',
                      input_system='natural', keep_dims=True,
-                     layer=position_obj)         # layer is the first col in copy_P.diff.storages.values()[0]
-        position_obj +=1
+                     layer=position_idx)         # layer is the first col in copy_P.diff.storages.values()[0]
+        
         # do the 3d COM analysis to find the orthogonal reciprocal space coordinates
         COM_x, COM_y, COM_z = COM_voxels_reciproc()
         
@@ -574,20 +576,25 @@ for row in range(0,nbr_rows):
         XRD_x[row,col] = COM_x
         XRD_z[row,col] = COM_z
         XRD_y[row,col] = COM_y
-#test plot for the coordinate system:   (remove these two plots)
-plt.figure()
-plt.imshow(np.log10(np.sum(a[position_obj-1],axis=2)), cmap='jet', interpolation='none', extent=[ q1[0], q1[-1], q3[0], q3[-1] ])
-plt.title('natural')
-plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
-plt.ylabel('$q_3$ $ (\AA ^{-1}$)')
-plt.colorbar()
-plt.figure()
-plt.imshow(np.log10(np.sum(hhhh.data[0],axis=2)), cmap='jet', interpolation='none', extent=[llll[0][0],llll[0][-1],llll[2][0],llll[2][-1] ])
-plt.title('cartesian')
-plt.xlabel('$q_x$ $ (\AA ^{-1}$)')   #q1~~qx
-plt.ylabel('$q_z$ $ (\AA ^{-1}$)')     #q3~qz
-plt.colorbar()        
-
+        
+        position_idx +=1
+        
+#test plot for the coordinate system:
+def test_coordShift():
+            
+    plt.figure()
+    plt.imshow(np.log10(np.sum(data[position_idx-1],axis=2)), cmap='jet', interpolation='none', extent=[ q1[0], q1[-1], q3[0], q3[-1] ])
+    plt.title('natural')
+    plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
+    plt.ylabel('$q_3$ $ (\AA ^{-1}$)')
+    plt.colorbar()
+    plt.figure()
+    plt.imshow(np.log10(np.sum(hhhh.data[0],axis=2)), cmap='jet', interpolation='none', extent=[llll[0][0],llll[0][-1],llll[2][0],llll[2][-1] ])
+    plt.title('cartesian')
+    plt.xlabel('$q_x$ $ (\AA ^{-1}$)')   #q1~~qx
+    plt.ylabel('$q_z$ $ (\AA ^{-1}$)')     #q3~qz
+    plt.colorbar()        
+#test_coordShift()
 
 def plot_XRD_xyz():
     # plot reciprocal space map x y z 
@@ -614,13 +621,12 @@ def plot_XRD_xyz():
     plt.ylabel('y [$\mu m$]')
     plt.colorbar()
 plot_XRD_xyz()
+
 # calc abs q and the angles
-
-
-
 XRD_absq =  np.sqrt(XRD_x**2 + XRD_y**2 + XRD_z**2)
 XRD_alpha = XRD_y / XRD_z
 XRD_beta = -XRD_x / XRD_z
+
 def plot_XRD_polar():    
      # cut the images in x-range: 
     # cut in extent_motorposition. x-pixel nbr 67 is at 2.0194197798363955
@@ -722,13 +728,3 @@ def rocking_curve_plot():
     plt.title('Rocking curve at highest-intensity poaint (nbr 536)');plt.ylabel('Photon counts');plt.xlabel('Rotation $\Theta$ ($\degree$)')
     plt.grid(True)
 #rocking_curve_plot()
-
-
-instruct = np.zeros((11,82))
-index = 0 
-for qqq in range(0,11):
-    for qqq2 in range(0,82):
-        instruct[qqq,qqq2]=index
-        index +=1
-
-
