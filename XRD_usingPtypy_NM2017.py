@@ -94,7 +94,6 @@ nbr_rows = 16 -(np.max(p.scans.scan01.data.vertical_shift) - np.min(p.scans.scan
 nbr_cols = 101-(np.max(p.scans.scan01.data.horizontal_shift) - np.min(p.scans.scan01.data.horizontal_shift))
 
 import numpy as np
-import matplotlib.pyplot as plt
 import sys   #to collect system path ( to collect function from another directory)
 sys.path.insert(0, 'C:/Users/Sanna/Documents/python_utilities') #can I collect all functions in this folder?
 from movie_maker import movie_maker
@@ -108,8 +107,10 @@ metadata = h5py.File( metadata_directory ,'r')
 motorpositions_directory = '/entry%s' %scan_name_string  
 
 #dataset_motorposition_gonphi = metadata.get(motorpositions_directory + '/measurement/gonphi')      
+# calculate mean value of dy
 motorpositiony = np.array(metadata.get(motorpositions_directory + '/measurement/samy'))
 dy = (motorpositiony[-1] - motorpositiony[0])*1./len(motorpositiony)
+# calculate mean value of dx
 # instead of samx, you find the motorposition in flysca ns from 'adlink_buff' # obs a row of zeros after values in adlinkAI_buff
 motorpositionx_AdLink = np.mean( np.array( metadata.get(motorpositions_directory + '/measurement/AdLinkAI_buff')), axis=0)[0:100] 
 dx = (motorpositionx_AdLink[-1] - motorpositionx_AdLink[0])*1./ len(motorpositionx_AdLink)
@@ -592,7 +593,7 @@ def test_coordShift():
     plt.ylabel('$q_3$ $ (\AA ^{-1}$)')
     plt.colorbar()
     plt.figure()
-    plt.imshow(np.log10(np.sum(hhhh.data[0],axis=2)), cmap='jet', interpolation='none', extent=[llll[0][0],llll[0][-1],llll[2][0],llll[2][-1] ])
+    plt.imshow(np.log10(np.sum(data_orth_coord.data[0],axis=2)), cmap='jet', interpolation='none', extent=[[ q1[0], q1[-1], q3[0], q3[-1] ] ])
     plt.title('cartesian')
     plt.xlabel('$q_x$ $ (\AA ^{-1}$)')   #q1~~qx
     plt.ylabel('$q_z$ $ (\AA ^{-1}$)')     #q3~qz
@@ -631,12 +632,16 @@ XRD_alpha = XRD_y / XRD_z
 XRD_beta = -XRD_x / XRD_z
 
 def plot_XRD_polar():    
-     # cut the images in x-range: 
-    # cut in extent_motorposition. x-pixel nbr 67 is at 2.0194197798363955
-    extent_motorpos[1] = 2.0194197798363955
+    # cut the images in x-range:start from the first pixel: 
     # remove the 1-pixel. (cheating) Did not remove it the extent, because then the 0 will not be shown in the X-scale and that will look weird
     start_cutXat = 1 
+    # whant to cut to the right so that the scale ends with an even number
+    #x-pixel nbr 67 is at 2.0194197798363955
     cutXat = 67
+    # replace the x-scales end-postion in extent_motorposition. 
+    extent_motorpos_cut = np.copy(extent_motorpos)
+    extent_motorpos_cut[1] = 2.0194197798363955    
+    
     # plot abs q to select pixels that are 'background', not on wire, and set these pixels to NaN (make them white)
     
     plt.figure()
@@ -656,19 +661,19 @@ def plot_XRD_polar():
     #XRD_mask = np.ones((XRD_mask.shape))
     
     plt.subplot(412)   
-    #calculate lattice constant a from |q|:
+    #calculate lattice constant a from |q|:                             # _cut
     a_lattice_exp = np.pi*2./ XRD_absq *np.sqrt(3)
     mean_strain = np.nanmean(XRD_mask[:,start_cutXat:cutXat]*a_lattice_exp[:,start_cutXat:cutXat])
     #try with reference strain equal to the center of the largest segment (for InP) # tody try with reference from the other NWs
     #mean_strain = a_lattice_exp[:,start_cutXat:cutXat].max() 
     
-    plt.imshow(100*XRD_mask[:,start_cutXat:cutXat]*(a_lattice_exp[:,start_cutXat:cutXat]-mean_strain)/mean_strain, cmap='jet',interpolation='none',extent=extent_motorpos) # not correct!'
+    plt.imshow(100*XRD_mask[:,start_cutXat:cutXat]*(a_lattice_exp[:,start_cutXat:cutXat]-mean_strain)/mean_strain, cmap='jet',interpolation='none',extent=extent_motorpos_cut) # not correct!'
     #plt.title('Relative length of Q-vector |Q|-$Q_{mean}$ $(10^{-3}/\AA$)')
     plt.title('Strain $\epsilon$ (%)')
     plt.ylabel('y [$\mu m$]');plt.colorbar()   
 
     plt.subplot(413)
-    plt.imshow(XRD_mask[:,start_cutXat:cutXat]*1E3*XRD_alpha[:,start_cutXat:cutXat], cmap='jet',interpolation='none',extent=extent_motorpos) # not correct!
+    plt.imshow(XRD_mask[:,start_cutXat:cutXat]*1E3*XRD_alpha[:,start_cutXat:cutXat], cmap='jet',interpolation='none',extent=extent_motorpos_cut) # not correct!
     # cut in extent_motorposition. x-pixel nbr 67 is at 2.0194197798363955
     plt.title('Rotation around $q_x$ ($mrad$)')
     plt.ylabel('y [$\mu m$]')
@@ -676,7 +681,7 @@ def plot_XRD_polar():
     #po.set_label('Bending around $q_x$ $\degree$')
    
     plt.subplot(414)
-    plt.imshow(XRD_mask[:,start_cutXat:cutXat]*1E3*XRD_beta[:,start_cutXat:cutXat], cmap='jet',interpolation='none',extent=extent_motorpos) # not correct!
+    plt.imshow(XRD_mask[:,start_cutXat:cutXat]*1E3*XRD_beta[:,start_cutXat:cutXat], cmap='jet',interpolation='none',extent=extent_motorpos_cut) # not correct!
     plt.title('Rotation around $q_y$ ($mrad$) ')
     plt.ylabel('y [$\mu m$]')
     plt.xlabel('x [$\mu m$]') 
