@@ -8,9 +8,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
+# TODO
+# if InP
+#       choose InP roi and change name
 
 p = u.Param()
-p.run = 'XRD_InPGa'   # 'XRD_InP'
+p.run = 'XRD_InP'   # 'XRD_InP'
 
 #sample = 'JWX33_NW2'; #scans = range(192, 200+1)+range(205, 222+1)  #list((192,203,206))   list((192,207,210))
 sample = 'JWX29A_NW1' #; scans =[458,459]
@@ -58,7 +61,7 @@ p.scans.scan01.data.vertical_shift =  [-1,-1,0,0,0,  0,0,2,1,0,  1,1,1,0,-1,  -1
 p.scans.scan01.data.horizontal_shift =  [3,2,0,1,2,  3,4,3,4,5,  5,6,6,5,6,  5,4,7,8,8,  8,8,10,11,12,  11,12,12,11,12,  12,11,12,13,13,  14,15,14,14,14,  13,15,16,15,14,  17,19,18,18,17,   17]
             # InGaP = [116:266,234:384]
             # InP = [116:266,80:230]
-p.scans.scan01.data.detector_roi_indices = [116,266,234,384]  #[116,266,80,230]  #    # this one should not be needed since u have shape and center...
+p.scans.scan01.data.detector_roi_indices = [116,266,80,230]  #[116,266,80,230]  #    # this one should not be needed since u have shape and center...
 
 p.scans.scan01.illumination = u.Param()
 p.scans.scan01.illumination.aperture = u.Param() 
@@ -118,7 +121,7 @@ extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
 # load and look at the probe and object
 #probe = P.probe.storages.values()[0].data[0]#remember, last index [0] is just for probe  
 #obj = P.obj.storages.values()[0].data
-# save masked diffraction patterns as 'a'
+# save masked diffraction patterns as 'data'
 data = P.diff.storages.values()[0].data*(P.mask.storages.values()[0].data[0])#        (storage_data[:,scan_COM,:,:])
 
 # shape paramter to make code readable
@@ -565,7 +568,7 @@ def XRD_analysis():
                          input_system='natural', keep_dims=True,
                          layer=position_idx)         # layer is the first col in copy_P.diff.storages.values()[0]
             
-            # do the 3d COM analysis to find the orthogonal reciprocal space coordinates
+            # do the 3d COM analysis to find the orthogonal reciprocal space coordinates of each Bragg peak
             #TODO what units comes out of this function?
             COM_x, COM_y, COM_z = COM_voxels_reciproc(data_orth_coord.data[0], q1_orth, q2_orth, q3_orth)
             
@@ -579,9 +582,9 @@ def XRD_analysis():
             # plot every other 3d peak and print out the postion of the COM analysis
             #if (position_idx%10=0):
              #   print 'hej'
-    return XRD_x, XRD_z, XRD_y
+    return XRD_x, XRD_z, XRD_y, data_orth_coord
 
-XRD_x, XRD_z, XRD_y = XRD_analysis()
+XRD_x, XRD_z, XRD_y, data_orth_coord = XRD_analysis()
         
 #test plot for the coordinate system: (only works for the last position, the other peaks are not saved)
 def test_coordShift():
@@ -593,7 +596,7 @@ def test_coordShift():
     plt.ylabel('$q_3$ $ (\AA ^{-1}$)')
     plt.colorbar()
     plt.figure()
-    plt.imshow(np.log10(np.sum(data_orth_coord.data[0],axis=2)), cmap='jet', interpolation='none', extent=[[ q1[0], q1[-1], q3[0], q3[-1] ] ])
+    plt.imshow(np.log10(np.sum(data_orth_coord.data[0],axis=2)), cmap='jet', interpolation='none', extent=[[ q1_orth[0], q1_orth[-1], q3_orth[0], q3_orth[-1] ] ])
     plt.title('cartesian')
     plt.xlabel('$q_x$ $ (\AA ^{-1}$)')   #q1~~qx
     plt.ylabel('$q_z$ $ (\AA ^{-1}$)')     #q3~qz
@@ -731,8 +734,77 @@ def rocking_curve_plot():
     alla = np.sum(np.sum(np.sum(data,axis=1),axis=1),axis=1)
     index_max = np.argmax(alla)
     theta = np.linspace(12.1,13.1,51)    # dthetea =0.02   
-    plt.figure(); plt.plot(theta,(np.sum(np.sum(a[index_max],axis=1),axis=1)))
+    plt.figure(); plt.plot(theta,(np.sum(np.sum(data[index_max],axis=1),axis=1)))
     plt.yscale('log')
-    plt.title('Rocking curve at highest-intensity poaint (nbr 536)');plt.ylabel('Photon counts');plt.xlabel('Rotation $\Theta$ ($\degree$)')
+    plt.title('Rocking curve at highest-intensity poaint (nbr 536)')
+    plt.ylabel('Photon counts');plt.xlabel('Rotation $\Theta$ ($\degree$)')
     plt.grid(True)
 #rocking_curve_plot()
+ 
+    
+###############################################################################
+# Testing a few Mayavi plotting functions
+###############################################################################    
+#def plot_3d_isosurface():
+from mayavi import mlab   #if you can do this instde function it is ood because it changes to QT fram    
+
+# check which positions has the most intensity, for a nice 3d Bragg peak plot
+pos_vect = np.sum(np.sum(np.sum(data, axis =1), axis =1), axis =1)
+max_pos = np.argmax(pos_vect)
+plt.figure()
+plt.text(5, np.max(pos_vect), 'Max at: ' + str(max_pos), fontdict=None, withdash=False)
+plt.plot(pos_vect)
+
+plt.figure()
+plt.imshow(data[max_pos,24])
+plt.title('InP Bragg peak projection with fringes')
+
+# change the coordinate system of this data
+data_orth_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, copy_P.diff.storages.values()[0], input_space='reciprocal',
+                         input_system='natural', keep_dims=True,
+                         layer=max_pos) 
+# check to see it is fine
+
+plt.figure()
+plt.imshow(data_orth_coord.data[0,24])
+plt.title('InP Bragg peak projection with fringes, orth coord')
+
+plot_data = data[max_pos] #data_orth_coord.data[0]     #data[0]0
+
+#TODO this peak has many nice fringes at max_pos and rotation 24-25, so it should give a nice Bragg peak
+src = mlab.pipeline.scalar_field(plot_data)  # this creates a regular space data
+mlab.pipeline.iso_surface(src)#, contours=[data[position].min()+0.1*data[position].ptp(), ], opacity=0.3)
+mlab.show()    
+
+# def slice plot
+mlab.pipeline.image_plane_widget(mlab.pipeline.scalar_field(plot_data),
+                            plane_orientation='x_axes',
+                            slice_index=10,
+                        )
+mlab.pipeline.image_plane_widget(mlab.pipeline.scalar_field(plot_data),
+                            plane_orientation='y_axes',
+                            slice_index=10,
+                        )
+mlab.outline()
+
+def plot3dvolume(): #  this looks very good, but almost never works 
+    x, y, z = np.ogrid[-10:10:20j, -10:10:20j, -10:10:20j]
+    s = np.sin(x*y*z)/(x*y*z)
+    mlab.pipeline.volume(mlab.pipeline.scalar_field(s))
+    # pipeline.scalar_filed makes data on a regular grid
+    #mlab.pipeline.volume(data[max_pos], vmin=0, vmax=0.8)
+
+
+
+
+#def contour3d():
+xmin=q3_orth[0]*1E0; xmax = q3_orth[-1]*1E0; ymin=q2_orth[0]*1E0; ymax=q2_orth[-1]*1E0; zmin=q1_orth[0]*1E0; zmax=q1_orth[-1]*1E0
+obj = mlab.contour3d( plot_data, contours=70, opacity=0.5, transparent=False, extent=[ q1_orth[0], q1_orth[-1],q2_orth[0], q2_orth[-1] , q3_orth[0], q3_orth[-1] ])  #  , vmin=0, vmax=0.8)
+mlab.axes(ranges=[xmin, xmax, ymin, ymax, zmin, zmax])
+mlab.xlabel('$Q_z$ [$\AA^{-1}$]'); mlab.ylabel('$Q_y$ [$\AA^{-1}$]'); mlab.zlabel('$Q_z$ [$\AA^{-1}$]')
+
+mlab.savefig('save_mayavi_InP_pos523.png')
+
+###############################################################################
+
+
