@@ -23,7 +23,7 @@ sample = 'JWX33_NW2'; scans = range(192, 200+1)+range(205, 222+1)
 
 p.data_type = "single"   #or "double"
 # for verbose output
-p.verbose_level = 5
+p.verbose_level = 0
 
 # use special plot layout for 3d data  (but the io.home part tells ptypy where to save recons and dumps)
 p.io = u.Param()
@@ -71,10 +71,15 @@ p.scans.scan01.data.distance = 1
 ##############################################################################
 # homogenius NWs
 ##############################################################################
-p#.scans.scan01.data.vertical_shift = [1] * len(scans) 
+p.scans.scan01.data.vertical_shift = [1] * len(scans) 
 #p.scans.scan01.data.vertical_shift = [-5, -4, -4, -3, -4, -4, -2, -2, -1, 3, 3, 2, 0, -1, 0, 1, 2, 2, -2, -1, -1, -2, -3       , 0, 0, 0, -4]#, 219: 3,                  (+ means up compared to average)
-p.scans.scan01.data.vertical_shift = [-2, -1, -1, -1, -2, -2,-1, -1, 0, 3, 2, 2, 1, 0, 0,   1, 2, 2,       0, 0, 0, 0, 0, 1, 1, 1, 1]#, 219: 3,                  (+ means up compared to average)
-p.scans.scan01.data.horizontal_shift = [1] * len(scans) 
+#p.scans.scan01.data.vertical_shift = [-2, -1, -1, -1, -2, -2,-1, -1, 0, 3, 2, 2, 1, 0, 0,   1, 2, 2,       0, 0, 0, 0, 0, 1, 1, 1, 1]#, 219: 3,                  (+ means up compared to average)
+#p.scans.scan01.data.vertical_shift = [-1, 0, 0, 0, 0, 0, 0, 0, 0, 6, 6, 5, 4, 3, 3,  4, 5, 5, 2, 2, 2, 0, 0, 0, 0, 0, 0]#, 219: 3,                  ( comapred to first)
+ #                                   222 220 218 216 214 212 210
+#p.scans.scan01.data.vertical_shift = [-1, 0, 0, 0, 0, 0, 0, 0, 0, 6, 6, 5, 4, 3, 3,  4, 5, 5, 2, 2, 2, 0, 0, 0, 0, 0, 0]#, 219: 3,                  ( comapred to first)
+p.scans.scan01.data.vertical_shift = [ 0, 0, 1, 2, 2, 2, 3, 3, 3, 1, 0, 0, 0, 0, 0, -2, -2, -2, -3, -3, -2, -2,  -3, -2, -3, -3,  -4]
+p.scans.scan01.data.horizontal_shift = [ -8, -8, -8, -8, -8, -3, -2, -4, 0, -5, -3, -6, -3, -6, -3, -5, -5, -7, -4,  -7, -3, -6, -2, -7, -2, -6, -3 ] 
+#p.scans.scan01.data.horizontal_shift = [1] * len(scans) 
 p.scans.scan01.data.detector_roi_indices = [275,425,150,300]  # this one should not be needed since u have shape and center...
 
 
@@ -106,6 +111,7 @@ p.engines.engine00.probe_support = None
 
 # prepare and run
 P = Ptycho(p,level=2) #level 2 for XRD analysis
+#TODO how to read metadata from P (data sorted acc to gonphi)
 
 import sys   #to collect system path ( to collect function from another directory)
 sys.path.insert(0, 'C:/Users/Sanna/Documents/python_utilities') #can I collect all functions in this folder?
@@ -113,13 +119,32 @@ from movie_maker import movie_maker
 import h5py
 
 # gather motorpositions from first rotation in scan list for plotting
-scan_name_int = scans[0]
+scan_name_int = scans[3]
 scan_name_string = '%d' %scan_name_int 
 metadata_directory = p.scans.scan01.data.datapath + sample + '.h5'
 metadata = h5py.File( metadata_directory ,'r')
 motorpositions_directory = '/entry%s' %scan_name_string  
 
-motorposition_gonphi = np.array(metadata.get(motorpositions_directory + '/measurement/gonphi'))
+# get the list of scans order after gonphi
+def sort_scans_in_gonphi():
+    gonphi_list = []
+    for i in range(0,len(scans)):
+        scan_name_int = scans[i]
+        scan_name_string = '%d' %scan_name_int 
+        metadata_directory = p.scans.scan01.data.datapath + sample + '.h5'
+        metadata = h5py.File( metadata_directory ,'r')
+        motorpositions_directory = '/entry%s' %scan_name_string     
+        motorposition_gonphi = np.array(metadata.get(motorpositions_directory + '/measurement/gonphi'))
+        gonphi_list.append(motorposition_gonphi[0])
+
+        # order the scan list after gonphi
+        # put them together
+        zipped = zip(gonphi_list,scans)
+        zipped.sort()
+        scans_gonphi = [x for y, x in zipped]
+    return scans_gonphi
+scans_gonphi = sort_scans_in_gonphi()        
+print scans_gonphi
 # calculate mean value of dy
 motorpositiony = np.array(metadata.get(motorpositions_directory + '/measurement/samy'))
 dy = (motorpositiony[-1] - motorpositiony[0])*1./len(motorpositiony)
@@ -129,7 +154,7 @@ motorpositionx_AdLink = np.mean( np.array( metadata.get(motorpositions_directory
 motorpositionx_AdLink = np.trim_zeros(motorpositionx_AdLink)
 dx = (motorpositionx_AdLink[-1] - motorpositionx_AdLink[0])*1./ len(motorpositionx_AdLink)
 
-#TODO find read out these (Nx Ny) from P somewhere-
+
 nbr_rows = len(motorpositiony) -(np.max(p.scans.scan01.data.vertical_shift) - np.min(p.scans.scan01.data.vertical_shift))                        
 nbr_cols = len(motorpositionx_AdLink)-(np.max(p.scans.scan01.data.horizontal_shift) - np.min(p.scans.scan01.data.horizontal_shift))
 
@@ -174,10 +199,10 @@ def plot_BF2d():
     for ii in range(0,len(scans),interval):
         plt.figure()
         plt.imshow(brightfield[ii], cmap='jet', interpolation='none', extent=extent_motorpos) 
-        plt.title('Bright field sorted in gonphi %d'%ii)  
+        plt.title('Bright field sorted in gonphi %d'%scans_gonphi[ii])  
         plt.xlabel('x [$\mu m$]') 
         plt.ylabel('y [$\mu m$]')
-        plt.savefig("BF/gonphi%d"%ii)   
+        plt.savefig("BF/scan%d"%scans_gonphi[ii])   
     # plot average bright field image (average over rotation)
     plt.figure()
     plt.imshow(np.mean(brightfield, axis=0), cmap='jet', interpolation='none',extent=extent_motorpos)
@@ -192,6 +217,10 @@ def plot_BF2d():
     plt.xlabel('x [$\mu m$]') 
     plt.ylabel('y [$\mu m$]')
 plot_BF2d()
+
+
+
+
 
 def bright_field_voxels(data,x,y):
     index = 0
@@ -653,10 +682,10 @@ XRD_beta = -XRD_x / XRD_z
 def plot_XRD_polar():    
     # cut the images in x-range:start from the first pixel: 
     # remove the 1-pixel. (cheating) Did not remove it the extent, because then the 0 will not be shown in the X-scale and that will look weird
-    start_cutXat = 1 
+    start_cutXat = 0 
     # whant to cut to the right so that the scale ends with an even number
     #x-pixel nbr 67 is at 2.0194197798363955
-    cutXat = 67
+    cutXat = nbr_cols # 67
     # replace the x-scales end-postion in extent_motorposition. 
     extent_motorpos_cut = np.copy(extent_motorpos)
     extent_motorpos_cut[1] = 2.0194197798363955    
