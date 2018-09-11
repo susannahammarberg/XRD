@@ -9,7 +9,7 @@ import numpy as np
 p = u.Param()
 p.run = 'XRD_InP'
 
-sample = 'JWX33_NW2'; scans = [192, 193] #range(192, 200+1)+range(205, 222+1) # list((192,207,222)) # range(192, 200+1)+range(205, 222+1)  #list((192,203,206))   list((192,207,210))
+sample = 'JWX33_NW2'; scans = range(192, 200+1)+range(205, 222+1) # list((192,207,222)) # range(192, 200+1)+range(205, 222+1)  #list((192,203,206))   list((192,207,210))
 
 p.data_type = "single"   #or "double"
 # for verbose output
@@ -110,7 +110,8 @@ motorpositions_directory = '/entry%s' %scan_name_string
 motorpositiony = np.array(metadata.get(motorpositions_directory + '/measurement/samy'))
 dy = (motorpositiony[-1] - motorpositiony[0])*1./len(motorpositiony)
 # instead of samx, you find the motorposition in flysca ns from 'adlink_buff' # obs a row of zeros after values in adlinkAI_buff
-motorpositionx_AdLink = np.mean( np.array( metadata.get(motorpositions_directory + '/measurement/AdLinkAI_buff')), axis=0)[0:100] 
+#todo cut awy zeros in a good way
+motorpositionx_AdLink = np.mean( np.array( metadata.get(motorpositions_directory + '/measurement/AdLinkAI_buff')), axis=0)[0:21] 
 dx = (motorpositionx_AdLink[-1] - motorpositionx_AdLink[0])*1./ len(motorpositionx_AdLink)
 extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
 # load and look at the probe and object
@@ -147,7 +148,7 @@ def make_movie():
 #make_movie()
 def plot_BF2d():
     #plot every something 2d bright fields
-    something = 1
+    something = 10
     for ii in range(0,a.shape[1],something):
         plt.figure()
         plt.imshow(brightfield[ii], cmap='jet', interpolation='none', extent=extent_motorpos) 

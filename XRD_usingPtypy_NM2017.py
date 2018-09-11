@@ -13,11 +13,11 @@ import matplotlib.animation as animation
 #       choose InP roi and change name
 
 p = u.Param()
-p.run = 'XRD_InP'   # 'XRD_InP'
+p.run = 'XRD_JWX33'   # 'XRD_InP'
 
-#sample = 'JWX33_NW2'; #scans = range(192, 200+1)+range(205, 222+1)  #list((192,203,206))   list((192,207,210))
-sample = 'JWX29A_NW1' #; scans =[458,459]
-scans = [458,459,460,461,462,463,464,465,466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
+sample = 'JWX33_NW2'; scans = range(192, 200+1)+range(205, 222+1)  #list((192,203,206))   list((192,207,210))
+#sample = 'JWX29A_NW1' #; scans =[458,459]
+#scans = [458,459,460,461,462,463,464,465,466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
 
 p.data_type = "single"   #or "double"
 # for verbose output
@@ -55,13 +55,24 @@ p.scans.scan01.data.energy = 9.49
 p.scans.scan01.data.distance = 1
 
 #sannas shifting parameters
+##############################################################################
+#S segmented NWs
+##############################################################################
 # the smallers values here (minus values) will include the 0:th scanning position
-#TODO test with no shifting and compare result: [0]*51 #
-p.scans.scan01.data.vertical_shift =  [-1,-1,0,0,0,  0,0,2,1,0,  1,1,1,0,-1,  -1,-1,-1,-1,0,  -1,-1,0,0,1,  1,-1,0,1,0,   2,0,0,1,1,  1,0,0,1,1,  1,2,2,2,4,  3,3,3,3,3,   3]
-p.scans.scan01.data.horizontal_shift =  [3,2,0,1,2,  3,4,3,4,5,  5,6,6,5,6,  5,4,7,8,8,  8,8,10,11,12,  11,12,12,11,12,  12,11,12,13,13,  14,15,14,14,14,  13,15,16,15,14,  17,19,18,18,17,   17]
+##TODO test with no shifting and compare result: [0]*51 #
+#p.scans.scan01.data.vertical_shift =  [-1,-1,0,0,0,  0,0,2,1,0,  1,1,1,0,-1,  -1,-1,-1,-1,0,  -1,-1,0,0,1,  1,-1,0,1,0,   2,0,0,1,1,  1,0,0,1,1,  1,2,2,2,4,  3,3,3,3,3,   3]
+#p.scans.scan01.data.horizontal_shift =  [3,2,0,1,2,  3,4,3,4,5,  5,6,6,5,6,  5,4,7,8,8,  8,8,10,11,12,  11,12,12,11,12,  12,11,12,13,13,  14,15,14,14,14,  13,15,16,15,14,  17,19,18,18,17,   17]
             # InGaP = [116:266,234:384]
             # InP = [116:266,80:230]
-p.scans.scan01.data.detector_roi_indices = [116,266,80,230]  #[116,266,80,230]  #    # this one should not be needed since u have shape and center...
+#p.scans.scan01.data.detector_roi_indices = [116,266,80,230]  #[116,266,80,230]  #    # this one should not be needed since u have shape and center...
+
+##############################################################################
+# homogenius NWs
+##############################################################################
+p.scans.scan01.data.vertical_shift = [1] * len(scans) 
+p.scans.scan01.data.horizontal_shift = [1] * len(scans) 
+p.scans.scan01.data.detector_roi_indices = [275,425,150,300]  # this one should not be needed since u have shape and center...
+
 
 p.scans.scan01.illumination = u.Param()
 p.scans.scan01.illumination.aperture = u.Param() 
@@ -92,11 +103,6 @@ p.engines.engine00.probe_support = None
 # prepare and run
 P = Ptycho(p,level=2) #level 2 for XRD analysis
 
-#TODO find read out these (Nx Ny) from P somewhere-
-nbr_rows = 16 -(np.max(p.scans.scan01.data.vertical_shift) - np.min(p.scans.scan01.data.vertical_shift))                        
-nbr_cols = 101-(np.max(p.scans.scan01.data.horizontal_shift) - np.min(p.scans.scan01.data.horizontal_shift))
-
-import numpy as np
 import sys   #to collect system path ( to collect function from another directory)
 sys.path.insert(0, 'C:/Users/Sanna/Documents/python_utilities') #can I collect all functions in this folder?
 from movie_maker import movie_maker
@@ -115,8 +121,15 @@ motorpositiony = np.array(metadata.get(motorpositions_directory + '/measurement/
 dy = (motorpositiony[-1] - motorpositiony[0])*1./len(motorpositiony)
 # calculate mean value of dx
 # instead of samx, you find the motorposition in flysca ns from 'adlink_buff' # obs a row of zeros after values in adlinkAI_buff
-motorpositionx_AdLink = np.mean( np.array( metadata.get(motorpositions_directory + '/measurement/AdLinkAI_buff')), axis=0)[0:100] 
+motorpositionx_AdLink = np.mean( np.array( metadata.get(motorpositions_directory + '/measurement/AdLinkAI_buff')), axis=0)
+motorpositionx_AdLink = np.trim_zeros(motorpositionx_AdLink)
 dx = (motorpositionx_AdLink[-1] - motorpositionx_AdLink[0])*1./ len(motorpositionx_AdLink)
+
+#TODO find read out these (Nx Ny) from P somewhere-
+nbr_rows = len(motorpositiony) -(np.max(p.scans.scan01.data.vertical_shift) - np.min(p.scans.scan01.data.vertical_shift))                        
+nbr_cols = len(motorpositionx_AdLink)-(np.max(p.scans.scan01.data.horizontal_shift) - np.min(p.scans.scan01.data.horizontal_shift))
+
+
 extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
 # load and look at the probe and object
 #probe = P.probe.storages.values()[0].data[0]#remember, last index [0] is just for probe  
@@ -194,7 +207,6 @@ def make_movie():
 #make_movie()
     
     
-
 
 def COM2d(data,nbr_cols,nbr_rows):
     COM_hor = np.zeros((nbr_rot,nbr_rows,nbr_cols))
@@ -357,7 +369,7 @@ def plot3ddata(data):
     plt.imshow((abs(data[:,:,data.shape[2]/2])), cmap='jet', interpolation='none') 
     plt.colorbar()
     
-plot3ddata(data[623])
+plot3ddata(data[len(data)/2])
 
 # define q1 q2 q3 and make them global. 
 def def_q_vectors():
@@ -759,33 +771,32 @@ plt.figure()
 plt.imshow(data[max_pos,24])
 plt.title('InP Bragg peak projection with fringes')
 
+
+# plot this position:
+pos = max_pos +3
 # change the coordinate system of this data
 data_orth_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, copy_P.diff.storages.values()[0], input_space='reciprocal',
                          input_system='natural', keep_dims=True,
-                         layer=max_pos) 
+                         layer=pos) 
 # check to see it is fine
 
 plt.figure()
 plt.imshow(data_orth_coord.data[0,24])
 plt.title('InP Bragg peak projection with fringes, orth coord')
 
-plot_data = data[max_pos] #data_orth_coord.data[0]     #data[0]0
+plot_data = data[pos] #data_orth_coord.data[0]     #data[0]0
 
-#TODO this peak has many nice fringes at max_pos and rotation 24-25, so it should give a nice Bragg peak
-src = mlab.pipeline.scalar_field(plot_data)  # this creates a regular space data
-mlab.pipeline.iso_surface(src)#, contours=[data[position].min()+0.1*data[position].ptp(), ], opacity=0.3)
-mlab.show()    
 
-# def slice plot
-mlab.pipeline.image_plane_widget(mlab.pipeline.scalar_field(plot_data),
-                            plane_orientation='x_axes',
-                            slice_index=10,
-                        )
-mlab.pipeline.image_plane_widget(mlab.pipeline.scalar_field(plot_data),
-                            plane_orientation='y_axes',
-                            slice_index=10,
-                        )
-mlab.outline()
+def slice_plot():
+    mlab.pipeline.image_plane_widget(mlab.pipeline.scalar_field(plot_data),
+                                plane_orientation='x_axes',
+                                slice_index=10,
+                            )
+    mlab.pipeline.image_plane_widget(mlab.pipeline.scalar_field(plot_data),
+                                plane_orientation='y_axes',
+                                slice_index=10,
+                            )
+    mlab.outline()
 
 def plot3dvolume(): #  this looks very good, but almost never works 
     x, y, z = np.ogrid[-10:10:20j, -10:10:20j, -10:10:20j]
@@ -794,16 +805,22 @@ def plot3dvolume(): #  this looks very good, but almost never works
     # pipeline.scalar_filed makes data on a regular grid
     #mlab.pipeline.volume(data[max_pos], vmin=0, vmax=0.8)
 
-
-
-
-#def contour3d():
+#def contour3d():   #iso surface
+mlab.figure()
 xmin=q3_orth[0]*1E0; xmax = q3_orth[-1]*1E0; ymin=q2_orth[0]*1E0; ymax=q2_orth[-1]*1E0; zmin=q1_orth[0]*1E0; zmax=q1_orth[-1]*1E0
 obj = mlab.contour3d( plot_data, contours=70, opacity=0.5, transparent=False, extent=[ q1_orth[0], q1_orth[-1],q2_orth[0], q2_orth[-1] , q3_orth[0], q3_orth[-1] ])  #  , vmin=0, vmax=0.8)
 mlab.axes(ranges=[xmin, xmax, ymin, ymax, zmin, zmax])
 mlab.xlabel('$Q_z$ [$\AA^{-1}$]'); mlab.ylabel('$Q_y$ [$\AA^{-1}$]'); mlab.zlabel('$Q_z$ [$\AA^{-1}$]')
+#C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\scan461_\bragg_peak_stacking\InP\
+mlab.savefig('pos_'+ str(pos) +'.jpg')
 
-mlab.savefig('save_mayavi_InP_pos523.png')
+
+# Another way to maka an iso surface. Can also be combined with cut planes
+def iso_pipeline_plot():
+    src = mlab.pipeline.scalar_field(plot_data)  # this creates a regular space data
+    mlab.pipeline.iso_surface(src, contours=[data[position].min()+0.1*data[position].ptp(), ], opacity=0.5)
+    mlab.show()    
+
 
 ###############################################################################
 
