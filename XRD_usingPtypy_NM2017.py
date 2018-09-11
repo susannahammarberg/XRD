@@ -494,7 +494,7 @@ copy_P = P     #dont know if this works or if i am just making another reference
 
 copy_P.diff.storages.values()[0].data = copy_P.diff.storages.values()[0].data * copy_P.mask.storages.values()[0].data
 # Choose postion:
-position = 451
+position = len(diff_data)/2
 test_shift_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, copy_P.diff.storages.values()[0], input_space='reciprocal',
                          input_system='natural', keep_dims=True,
                          layer=position)
@@ -664,10 +664,10 @@ def plot_XRD_polar():
     start_cutXat = 0 
     # whant to cut to the right so that the scale ends with an even number
     #x-pixel nbr 67 is at 2.0194197798363955
-    cutXat = nbr_cols # 67
+    cutXat = nbr_cols+2 # 67
     # replace the x-scales end-postion in extent_motorposition. 
     extent_motorpos_cut = np.copy(extent_motorpos)
-    extent_motorpos_cut[1] = 2.0194197798363955    
+    ###extent_motorpos_cut[1] = 2.0194197798363955 segmentedNW
     
     # plot abs q to select pixels that are 'background', not on wire, and set these pixels to NaN (make them white)
     
@@ -681,7 +681,7 @@ def plot_XRD_polar():
     plt.colorbar()
     # create a mask from the BF matrix, for the RSM analysis
     XRD_mask = np.copy(sum(brightfield))
-    XRD_mask[XRD_mask < 40000 ] = np.nan
+    XRD_mask[XRD_mask < 50000 ] = np.nan
     XRD_mask[XRD_mask > 0] = 1       #make binary, all values not none to 1
 
     # if you want no mask use:
@@ -704,7 +704,8 @@ def plot_XRD_polar():
     # cut in extent_motorposition. x-pixel nbr 67 is at 2.0194197798363955
     plt.title('Rotation around $q_x$ ($mrad$)')
     plt.ylabel('y [$\mu m$]')
-    po = plt.colorbar(ticks=(0,1,2,3,4))
+    po = plt.colorbar()
+    #po = plt.colorbar(ticks=(0,1,2,3,4))
     #po.set_label('Bending around $q_x$ $\degree$')
    
     plt.subplot(414)
