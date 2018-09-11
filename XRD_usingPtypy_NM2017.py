@@ -170,7 +170,8 @@ nbr_rot = len(scans)
 # plot the sum of all used diffraction images
 plt.figure()
 plt.imshow(np.log10(sum(sum(diff_data))),cmap='jet', interpolation='none')
-
+plt.title('Summed intensity InP NW (log)')
+#plt.savefig("summed_intensity") 
 #movie_maker(np.log10(abs(probe)))
 
 def bright_field(data,x,y):
@@ -199,14 +200,14 @@ def plot_BF2d():
         plt.title('Bright field sorted in gonphi %d'%scans_gonphi[ii])  
         plt.xlabel('x [$\mu m$]') 
         plt.ylabel('y [$\mu m$]')
-        plt.savefig("BF/scan%d"%scans_gonphi[ii])   
+        #plt.savefig("BF/scan%d"%scans_gonphi[ii])   
     # plot average bright field image (average over rotation)
     plt.figure()
     plt.imshow(np.mean(brightfield, axis=0), cmap='jet', interpolation='none',extent=extent_motorpos)
     plt.title('Average image from bright field') 
     plt.xlabel('x [$\mu m$]') 
     plt.ylabel('y [$\mu m$]')
-    plt.savefig("BF/Average_brightfield")     
+    #plt.savefig("BF/Average_brightfield")     
     
     plt.figure()
     plt.imshow(sum(brightfield), cmap='jet', interpolation='none',extent=extent_motorpos)
@@ -382,25 +383,6 @@ def numpy2vtk(data,filename,dx=1.0,dy=1.0,dz=1.0,x0=0.0,y0=0.0,z0=0.0):
 #vtk_out = numpy2vtk(KO,'KOtest.vtk')
 #vtk_out = numpy2vtk(np.log10(a[623,:,140:180,170:240]),'single_braggpeak_log.vtk')
 
-# general function for plotting central cuts of 3d data
-def plot3ddata(data):
-    plt.figure()
-    plt.suptitle('Single position Bragg peak')
-    plt.subplot(221)
-    #plt.title('-axis')
-    plt.imshow((abs((data[data.shape[0]/2,:,:]))), cmap='jet', interpolation='none') 
-    plt.colorbar()
-    plt.subplot(222)
-    #plt.title('-axis')
-    plt.imshow(abs(data[:,data.shape[1]/2,:]), cmap='jet', interpolation='none') 
-    plt.colorbar()
-    plt.subplot(223)
-    #plt.title('-axis')
-    plt.imshow((abs(data[:,:,data.shape[2]/2])), cmap='jet', interpolation='none') 
-    plt.colorbar()
-    
-plot3ddata(diff_data[len(diff_data)/2])
-
 # define q1 q2 q3 and make them global. 
 def def_q_vectors():
     global dq1, dq2, dq3, q_abs
@@ -438,7 +420,7 @@ def plot3d_singleBraggpeak(data):
     # OBS FIRST AXIS IS Y
     plt.subplot(222)
     #plt.title('-axis')
-    plt.imshow(abs(data[:,nbr_rot/2,:]), cmap='jet', interpolation='none', extent=[  -dq1*shape/2, dq1*shape/2, -dq3*nbr_rot/2+q_abs, dq3*nbr_rot/2+q_abs]) 
+    plt.imshow(abs(data[:,data.shape[1]/2,:]), cmap='jet', interpolation='none', extent=[  -dq1*shape/2, dq1*shape/2, -dq3*nbr_rot/2+q_abs, dq3*nbr_rot/2+q_abs]) 
     plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_3$ $ (\AA ^{-1}$)') 
     plt.colorbar()
