@@ -15,7 +15,9 @@ import matplotlib.animation as animation
 p = u.Param()
 p.run = 'XRD_JWX33'   # 'XRD_InP'
 
-sample = 'JWX33_NW2'; scans = range(192, 200+1)+range(205, 222+1)  #list((192,203,206))   list((192,207,210))
+sample = 'JWX33_NW2'; scans = range(192, 200+1)+range(205, 222+1)
+# OBS OBSOBS
+##############scans = scans[0:23]
 #sample = 'JWX29A_NW1' #; scans =[458,459]
 #scans = [458,459,460,461,462,463,464,465,466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
 
@@ -69,7 +71,9 @@ p.scans.scan01.data.distance = 1
 ##############################################################################
 # homogenius NWs
 ##############################################################################
-p.scans.scan01.data.vertical_shift = [1] * len(scans) 
+p#.scans.scan01.data.vertical_shift = [1] * len(scans) 
+#p.scans.scan01.data.vertical_shift = [-5, -4, -4, -3, -4, -4, -2, -2, -1, 3, 3, 2, 0, -1, 0, 1, 2, 2, -2, -1, -1, -2, -3       , 0, 0, 0, -4]#, 219: 3,                  (+ means up compared to average)
+p.scans.scan01.data.vertical_shift = [-2, -1, -1, -1, -2, -2,-1, -1, 0, 3, 2, 2, 1, 0, 0,   1, 2, 2,       0, 0, 0, 0, 0, 1, 1, 1, 1]#, 219: 3,                  (+ means up compared to average)
 p.scans.scan01.data.horizontal_shift = [1] * len(scans) 
 p.scans.scan01.data.detector_roi_indices = [275,425,150,300]  # this one should not be needed since u have shape and center...
 
@@ -115,7 +119,7 @@ metadata_directory = p.scans.scan01.data.datapath + sample + '.h5'
 metadata = h5py.File( metadata_directory ,'r')
 motorpositions_directory = '/entry%s' %scan_name_string  
 
-#dataset_motorposition_gonphi = metadata.get(motorpositions_directory + '/measurement/gonphi')      
+motorposition_gonphi = np.array(metadata.get(motorpositions_directory + '/measurement/gonphi'))
 # calculate mean value of dy
 motorpositiony = np.array(metadata.get(motorpositions_directory + '/measurement/samy'))
 dy = (motorpositiony[-1] - motorpositiony[0])*1./len(motorpositiony)
@@ -165,22 +169,22 @@ for jj in range(0,len(scans)):
 
 
 def plot_BF2d():
-    interval=10 #plotting interval
+    interval=1 #plotting interval
     #plot every something 2d bright fields
     for ii in range(0,len(scans),interval):
         plt.figure()
         plt.imshow(brightfield[ii], cmap='jet', interpolation='none', extent=extent_motorpos) 
-        plt.title('Single image from bright field %d'%ii)  
+        plt.title('Bright field sorted in gonphi %d'%ii)  
         plt.xlabel('x [$\mu m$]') 
         plt.ylabel('y [$\mu m$]')
-        #plt.savefig("single_brightfield_%d"%jj)   
+        plt.savefig("BF/gonphi%d"%ii)   
     # plot average bright field image (average over rotation)
     plt.figure()
     plt.imshow(np.mean(brightfield, axis=0), cmap='jet', interpolation='none',extent=extent_motorpos)
     plt.title('Average image from bright field') 
     plt.xlabel('x [$\mu m$]') 
     plt.ylabel('y [$\mu m$]')
-    #plt.savefig("Average_brightfield")     
+    plt.savefig("BF/Average_brightfield")     
     
     plt.figure()
     plt.imshow(sum(brightfield), cmap='jet', interpolation='none',extent=extent_motorpos)
