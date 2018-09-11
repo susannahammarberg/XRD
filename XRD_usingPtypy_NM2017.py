@@ -71,15 +71,12 @@ p.scans.scan01.data.distance = 1
 ##############################################################################
 # homogenius NWs
 ##############################################################################
-p.scans.scan01.data.vertical_shift = [1] * len(scans) 
-#p.scans.scan01.data.vertical_shift = [-5, -4, -4, -3, -4, -4, -2, -2, -1, 3, 3, 2, 0, -1, 0, 1, 2, 2, -2, -1, -1, -2, -3       , 0, 0, 0, -4]#, 219: 3,                  (+ means up compared to average)
-#p.scans.scan01.data.vertical_shift = [-2, -1, -1, -1, -2, -2,-1, -1, 0, 3, 2, 2, 1, 0, 0,   1, 2, 2,       0, 0, 0, 0, 0, 1, 1, 1, 1]#, 219: 3,                  (+ means up compared to average)
-#p.scans.scan01.data.vertical_shift = [-1, 0, 0, 0, 0, 0, 0, 0, 0, 6, 6, 5, 4, 3, 3,  4, 5, 5, 2, 2, 2, 0, 0, 0, 0, 0, 0]#, 219: 3,                  ( comapred to first)
- #                                   222 220 218 216 214 212 210
-#p.scans.scan01.data.vertical_shift = [-1, 0, 0, 0, 0, 0, 0, 0, 0, 6, 6, 5, 4, 3, 3,  4, 5, 5, 2, 2, 2, 0, 0, 0, 0, 0, 0]#, 219: 3,                  ( comapred to first)
+#p.scans.scan01.data.vertical_shift = [1] * len(scans) 
+#p.scans.scan01.data.horizontal_shift = [1] * len(scans) 
+            
 p.scans.scan01.data.vertical_shift = [ 0, 0, 1, 2, 2, 2, 3, 3, 3, 1, 0, 0, 0, 0, 0, -2, -2, -2, -3, -3, -2, -2,  -3, -2, -3, -3,  -4]
 p.scans.scan01.data.horizontal_shift = [ -8, -8, -8, -8, -8, -3, -2, -4, 0, -5, -3, -6, -3, -6, -3, -5, -5, -7, -4,  -7, -3, -6, -2, -7, -2, -6, -3 ] 
-#p.scans.scan01.data.horizontal_shift = [1] * len(scans) 
+
 p.scans.scan01.data.detector_roi_indices = [275,425,150,300]  # this one should not be needed since u have shape and center...
 
 
@@ -164,7 +161,7 @@ extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
 #probe = P.probe.storages.values()[0].data[0]#remember, last index [0] is just for probe  
 #obj = P.obj.storages.values()[0].data
 # save masked diffraction patterns as 'data'
-data = P.diff.storages.values()[0].data*(P.mask.storages.values()[0].data[0])#        (storage_data[:,scan_COM,:,:])
+diff_data = P.diff.storages.values()[0].data*(P.mask.storages.values()[0].data[0])#        (storage_data[:,scan_COM,:,:])
 
 # shape paramter to make code readable
 shape = p.scans.scan01.data.shape
@@ -172,7 +169,7 @@ nbr_rot = len(scans)
 
 # plot the sum of all used diffraction images
 plt.figure()
-plt.imshow(np.log10(sum(sum(data))),cmap='jet', interpolation='none')
+plt.imshow(np.log10(sum(sum(diff_data))),cmap='jet', interpolation='none')
 
 #movie_maker(np.log10(abs(probe)))
 
@@ -188,13 +185,13 @@ def bright_field(data,x,y):
 # do BF for all rotations
 brightfield = np.zeros((len(scans), nbr_rows, nbr_cols))
 for jj in range(0,len(scans)):
-    brightfield[jj] = bright_field(data[:,jj,:,:],nbr_cols,nbr_rows)
+    brightfield[jj] = bright_field(diff_data[:,jj,:,:],nbr_cols,nbr_rows)
     #Normalize each image ( so that i can plot a better 3D image)
     #brightfield[jj] = brightfield[jj] / brightfield[jj].max()
 
 
 def plot_BF2d():
-    interval=1 #plotting interval
+    interval=8 #plotting interval
     #plot every something 2d bright fields
     for ii in range(0,len(scans),interval):
         plt.figure()
@@ -232,12 +229,12 @@ def bright_field_voxels(data,x,y):
             index += 1
             
     return photons
-brightfield_voxel = bright_field_voxels(data,nbr_cols,nbr_rows)
+brightfield_voxel = bright_field_voxels(diff_data,nbr_cols,nbr_rows)
 
-def make_movie():
+def make_movie(data):
  #   movie_maker(brightfield)
     movie_maker(abs((data[:,0]))) #movie over summation over all position, loop over rotations. to see where there is signal
-#make_movie()
+#make_movie(diff_data)
     
     
 
@@ -275,7 +272,7 @@ def COM2d(data,nbr_cols,nbr_rows):
 
 def do_plot_COM2d():
     for jj in range(0,nbr_rot):
-        l,m,n,o = COM2d(data[:,jj,:,:],nbr_cols,nbr_rows)
+        l,m,n,o = COM2d(diff_data[:,jj,:,:],nbr_cols,nbr_rows)
         COM_hor[jj,:,:]=l
         COM_ver[jj,:,:]=m
         COM_mag[jj,:,:]=n
@@ -326,7 +323,7 @@ def COM_voxels(data,nbr_cols,nbr_rows):
             index += 1
     return COM_hor, COM_ver, COM_rot, COM_mag, COM_ang
 
-COM_hor,COM_ver,COM_rot,COM_mag,not_corr_ang = COM_voxels(data,nbr_cols,nbr_rows)
+COM_hor,COM_ver,COM_rot,COM_mag,not_corr_ang = COM_voxels(diff_data,nbr_cols,nbr_rows)
 
 def plot_COM():
     plt.figure()
@@ -402,7 +399,7 @@ def plot3ddata(data):
     plt.imshow((abs(data[:,:,data.shape[2]/2])), cmap='jet', interpolation='none') 
     plt.colorbar()
     
-plot3ddata(data[len(data)/2])
+plot3ddata(diff_data[len(diff_data)/2])
 
 # define q1 q2 q3 and make them global. 
 def def_q_vectors():
@@ -453,7 +450,7 @@ def plot3d_singleBraggpeak(data):
     plt.colorbar()
     
     
-plot3d_singleBraggpeak(data[451])
+plot3d_singleBraggpeak(diff_data[len(diff_data)/2])
 
 
 def movie_maker2(data, name):
@@ -493,7 +490,7 @@ def movie_maker2(data, name):
     plt.show()
     # save animation:
     ani.save(name +'.mp4', writer="mencoder")    
-#movie_maker2(data[:,22:25],'rot22__InP')
+#movie_maker2(diff_data[:,22:25],'rot22__InP')
 
 
  
@@ -528,7 +525,7 @@ tup = q1, q2, q3
 q1_orth, q2_orth, q3_orth = ptypy.core.geometry_bragg.Geo_Bragg.transformed_grid(g, tup, input_space='reciprocal',input_system='natural')
 #compare natural and unscewed coordinate systems:
 plt.figure()
-plt.imshow(np.log10(np.sum(data[position],axis=2)), cmap='jet', interpolation='none', extent=[ q1[0], q1[-1], q3[0], q3[-1] ])
+plt.imshow(np.log10(np.sum(diff_data[position],axis=2)), cmap='jet', interpolation='none', extent=[ q1[0], q1[-1], q3[0], q3[-1] ])
 plt.title('natural')
 plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   
 plt.ylabel('$q_3$ $ (\AA ^{-1}$)')
@@ -635,7 +632,7 @@ XRD_x, XRD_z, XRD_y, data_orth_coord = XRD_analysis()
 def test_coordShift():
             
     plt.figure()
-    plt.imshow(np.log10(np.sum(data[-1],axis=2)), cmap='jet', interpolation='none', extent=[ q1[0], q1[-1], q3[0], q3[-1] ])
+    plt.imshow(np.log10(np.sum(diff_data[-1],axis=2)), cmap='jet', interpolation='none', extent=[ q1[0], q1[-1], q3[0], q3[-1] ])
     plt.title('natural')
     plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_3$ $ (\AA ^{-1}$)')
@@ -776,15 +773,15 @@ def rocking_curve_plot():
     #458: theta= 13.1    #515 theta = 12.1
     # Is the first point 458? they are sorted according to gonphi, right? In that case it is right.
     # find highest intensity point
-    alla = np.sum(np.sum(np.sum(data,axis=1),axis=1),axis=1)
+    alla = np.sum(np.sum(np.sum(diff_data,axis=1),axis=1),axis=1)
     index_max = np.argmax(alla)
     theta = np.linspace(12.1,13.1,51)    # dthetea =0.02   
-    plt.figure(); plt.plot(theta,(np.sum(np.sum(data[index_max],axis=1),axis=1)))
+    plt.figure(); plt.plot(theta,(np.sum(np.sum(diff_data[index_max],axis=1),axis=1)))
     plt.yscale('log')
     plt.title('Rocking curve at highest-intensity poaint (nbr 536)')
     plt.ylabel('Photon counts');plt.xlabel('Rotation $\Theta$ ($\degree$)')
     plt.grid(True)
-#rocking_curve_plot()
+rocking_curve_plot()
  
     
 ###############################################################################
@@ -794,14 +791,14 @@ def rocking_curve_plot():
 from mayavi import mlab   #if you can do this instde function it is ood because it changes to QT fram    
 
 # check which positions has the most intensity, for a nice 3d Bragg peak plot
-pos_vect = np.sum(np.sum(np.sum(data, axis =1), axis =1), axis =1)
+pos_vect = np.sum(np.sum(np.sum(diff_data, axis =1), axis =1), axis =1)
 max_pos = np.argmax(pos_vect)
 plt.figure()
 plt.text(5, np.max(pos_vect), 'Max at: ' + str(max_pos), fontdict=None, withdash=False)
 plt.plot(pos_vect)
 
 plt.figure()
-plt.imshow(data[max_pos,24])
+plt.imshow(diff_data[max_pos,24])
 plt.title('InP Bragg peak projection with fringes')
 
 
@@ -817,7 +814,7 @@ plt.figure()
 plt.imshow(data_orth_coord.data[0,24])
 plt.title('InP Bragg peak projection with fringes, orth coord')
 
-plot_data = data[pos] #data_orth_coord.data[0]     #data[0]0
+plot_data = diff_data[pos] #data_orth_coord.data[0]     #data[0]0
 
 
 def slice_plot():
@@ -851,7 +848,7 @@ mlab.savefig('pos_'+ str(pos) +'.jpg')
 # Another way to maka an iso surface. Can also be combined with cut planes
 def iso_pipeline_plot():
     src = mlab.pipeline.scalar_field(plot_data)  # this creates a regular space data
-    mlab.pipeline.iso_surface(src, contours=[data[position].min()+0.1*data[position].ptp(), ], opacity=0.5)
+    mlab.pipeline.iso_surface(src, contours=[diff_data[position].min()+0.1*diff_data[position].ptp(), ], opacity=0.5)
     mlab.show()    
 
 
