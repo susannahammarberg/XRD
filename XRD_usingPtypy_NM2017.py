@@ -1,5 +1,5 @@
 # load data via ptypy
-# this script also does XRD analysis of the InGaP Bragg peak of Bragg ptycho scan 458_---
+# XRD analysis: use ptypy coordinate shifting systems to shift the data 
 
 import ptypy
 from ptypy.core import Ptycho
@@ -74,9 +74,7 @@ p.scans.scan01.data.distance = 1
             
 p.scans.scan01.data.vertical_shift = [ 0, 0, 1, 2, 2, 2, 3, 3, 3, 1, 0, 0, 0, 0, 0, -2, -2, -2, -3, -3, -2, -2,  -3, -2, -3, -3,  -4]
 p.scans.scan01.data.horizontal_shift = [ -8, -8, -8, -8, -8, -3, -2, -4, 0, -5, -3, -6, -3, -6, -3, -5, -5, -7, -4,  -7, -3, -6, -2, -7, -2, -6, -3 ] 
-
 p.scans.scan01.data.detector_roi_indices = [275,425,150,300]  # this one should not be needed since u have shape and center...
-
 
 p.scans.scan01.illumination = u.Param()
 p.scans.scan01.illumination.aperture = u.Param() 
@@ -102,7 +100,6 @@ p.engines.engine00.probe_support = None
 # p.engines.engine00.sample_support.shrinkwrap.smooth = None
 # p.engines.engine00.sample_support.shrinkwrap.start = 15
 # p.engines.engine00.sample_support.shrinkwrap.plot = True
-
 
 # prepare and run
 P = Ptycho(p,level=2) #level 2 for XRD analysis
@@ -138,8 +135,9 @@ def sort_scans_in_gonphi():
         zipped.sort()
         scans_gonphi = [x for y, x in zipped]
     return scans_gonphi
-scans_gonphi = sort_scans_in_gonphi()        
-print scans_gonphi
+scans_gonphi = sort_scans_in_gonphi()  
+      
+
 # calculate mean value of dy
 motorpositiony = np.array(metadata.get(motorpositions_directory + '/measurement/samy'))
 dy = (motorpositiony[-1] - motorpositiony[0])*1./len(motorpositiony)
@@ -149,7 +147,7 @@ motorpositionx_AdLink = np.mean( np.array( metadata.get(motorpositions_directory
 motorpositionx_AdLink = np.trim_zeros(motorpositionx_AdLink)
 dx = (motorpositionx_AdLink[-1] - motorpositionx_AdLink[0])*1./ len(motorpositionx_AdLink)
 
-
+# calc number of rows and cols that is used from measuremtn after realigning postions
 nbr_rows = len(motorpositiony) -(np.max(p.scans.scan01.data.vertical_shift) - np.min(p.scans.scan01.data.vertical_shift))                        
 nbr_cols = len(motorpositionx_AdLink)-(np.max(p.scans.scan01.data.horizontal_shift) - np.min(p.scans.scan01.data.horizontal_shift))
 
@@ -158,7 +156,7 @@ extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
 # load and look at the probe and object
 #probe = P.probe.storages.values()[0].data[0]#remember, last index [0] is just for probe  
 #obj = P.obj.storages.values()[0].data
-# save masked diffraction patterns as 'data'
+# save masked diffraction patterns
 diff_data = P.diff.storages.values()[0].data*(P.mask.storages.values()[0].data[0])#        (storage_data[:,scan_COM,:,:])
 
 # shape paramter to make code readable
@@ -215,9 +213,6 @@ def plot_BF2d():
 plot_BF2d()
 
 
-
-
-
 def bright_field_voxels(data,x,y):
     index = 0
     photons = np.zeros((y,x)) 
@@ -232,10 +227,9 @@ brightfield_voxel = bright_field_voxels(diff_data,nbr_cols,nbr_rows)
 
 def make_movie(data):
  #   movie_maker(brightfield)
-    movie_maker(abs((data[:,0]))) #movie over summation over all position, loop over rotations. to see where there is signal
+    movie_maker(abs((data[:,0]))) 
 #make_movie(diff_data)
-    
-    
+        
 
 def COM2d(data,nbr_cols,nbr_rows):
     COM_hor = np.zeros((nbr_rot,nbr_rows,nbr_cols))
@@ -281,8 +275,9 @@ def do_plot_COM2d():
         plt.colorbar()
 #do_plot_COM2d()
 
-# TODO: remove single photon count, if the COM is calculated for very small values like pixels with 1 photon counts, then the result will be missleading. Set a threshold that keeps the resulting pixel on a mean value, like if sum(sum(sum(diffPattern)))< threshold. sum(sum(sum()))==bkg_value
-# its not so good its a bit wired
+# TODO: remove single photon count, if the COM is calculated for very small values like pixels with 1 photon counts, 
+#then the result will be missleading. Set a threshold that keeps the resulting pixel on a mean value, like if sum(sum(sum(diffPattern)))< threshold. sum(sum(sum()))==bkg_value
+
 # input here is 4d matrix with [nbr_diffpatterns][nbr_rotations][nbr_pixels_x][nbr_pixels_y]
 def COM_voxels(data,nbr_cols,nbr_rows):
     # define a vector with length of the length of roi on the detector
@@ -487,13 +482,10 @@ g = ptypy.core.geometry_bragg.Geo_Bragg(
     distance=1, 
     theta_bragg=12)
 
-# make a copy of P first (not to change in P) (P ptycho instance)
-copy_P = P     #dont know if this works or if i am just making another reference to P (like if you try to copy a np array without np.copy(array))
-
-copy_P.diff.storages.values()[0].data = copy_P.diff.storages.values()[0].data * copy_P.mask.storages.values()[0].data
+P.diff.storages.values()[0].data = P.diff.storages.values()[0].data * P.mask.storages.values()[0].data
 # Choose postion:
 position = len(diff_data)/2
-test_shift_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, copy_P.diff.storages.values()[0], input_space='reciprocal',
+test_shift_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.diff.storages.values()[0], input_space='reciprocal',
                          input_system='natural', keep_dims=True,
                          layer=position)
 
@@ -553,9 +545,9 @@ def XRD_analysis():
         for col in range(0,nbr_cols):
             
             
-            data_orth_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, copy_P.diff.storages.values()[0], input_space='reciprocal',
+            data_orth_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.diff.storages.values()[0], input_space='reciprocal',
                          input_system='natural', keep_dims=True,
-                         layer=position_idx)         # layer is the first col in copy_P.diff.storages.values()[0]
+                         layer=position_idx)         # layer is the first col in P.diff.storages.values()[0]
             
             # do the 3d COM analysis to find the orthogonal reciprocal space coordinates of each Bragg peak
             #TODO what units comes out of this function?
@@ -630,7 +622,7 @@ def plot_XRD_polar():
     start_cutXat = 0 
     # whant to cut to the right so that the scale ends with an even number
     #x-pixel nbr 67 is at 2.0194197798363955
-    cutXat = nbr_cols+2 # 67
+    cutXat = nbr_cols+1 # 67
     # replace the x-scales end-postion in extent_motorposition. 
     extent_motorpos_cut = np.copy(extent_motorpos)
     ###extent_motorpos_cut[1] = 2.0194197798363955 segmentedNW
@@ -651,10 +643,10 @@ def plot_XRD_polar():
     XRD_mask[XRD_mask > 0] = 1       #make binary, all values not none to 1
 
     # if you want no mask use:
-    #XRD_mask = np.ones((XRD_mask.shape))
+    XRD_mask = np.ones((XRD_mask.shape))
     
     plt.subplot(412)   
-    #calculate lattice constant a from |q|:                             # _cut
+    #calculate lattice constant a from |q|:                             
     a_lattice_exp = np.pi*2./ XRD_absq *np.sqrt(3)
     mean_strain = np.nanmean(XRD_mask[:,start_cutXat:cutXat]*a_lattice_exp[:,start_cutXat:cutXat])
     #try with reference strain equal to the center of the largest segment (for InP) # tody try with reference from the other NWs
@@ -682,6 +674,7 @@ def plot_XRD_polar():
     po = plt.colorbar()
     #po = plt.colorbar(ticks=(5, 10, 15 ))
     #po.set_label('Bending around $q_y$ $\degree$')
+    
 plot_XRD_polar()
 
 
@@ -724,10 +717,10 @@ def rocking_curve_plot():
     # find highest intensity point
     alla = np.sum(np.sum(np.sum(diff_data,axis=1),axis=1),axis=1)
     index_max = np.argmax(alla)
-    theta = np.linspace(12.1,13.1,51)    # dthetea =0.02   
-    plt.figure(); plt.plot(theta,(np.sum(np.sum(diff_data[index_max],axis=1),axis=1)))
+    #theta = np.linspace(12.1,13.1,51    # dthetea =0.02   
+    plt.figure(); plt.plot((np.sum(np.sum(diff_data[index_max],axis=1),axis=1)))
     plt.yscale('log')
-    plt.title('Rocking curve at highest-intensity poaint (nbr 536)')
+    plt.title('Rocking curve at highest-intensity point')
     plt.ylabel('Photon counts');plt.xlabel('Rotation $\Theta$ ($\degree$)')
     plt.grid(True)
 rocking_curve_plot()
@@ -754,7 +747,7 @@ plt.title('InP Bragg peak projection with fringes')
 # plot this position:
 pos = max_pos +3
 # change the coordinate system of this data
-data_orth_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, copy_P.diff.storages.values()[0], input_space='reciprocal',
+data_orth_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.diff.storages.values()[0], input_space='reciprocal',
                          input_system='natural', keep_dims=True,
                          layer=pos) 
 # check to see it is fine
