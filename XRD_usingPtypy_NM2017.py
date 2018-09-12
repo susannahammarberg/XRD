@@ -16,8 +16,6 @@ p = u.Param()
 p.run = 'XRD_JWX33'   # 'XRD_InP'
 
 sample = 'JWX33_NW2'; scans = range(192, 200+1)+range(205, 222+1)
-# OBS OBSOBS
-##############scans = scans[0:23]
 #sample = 'JWX29A_NW1' #; scans =[458,459]
 #scans = [458,459,460,461,462,463,464,465,466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
 
@@ -520,58 +518,25 @@ plt.ylabel('$q_z$ $ (\AA ^{-1}$)')     #q3~qz
 plt.colorbar()
 # and 3d cuts
 #plot3d_singleBraggpeak(np.log10(data[position]))
-#plot3d_singleBraggpeak(np.log10(hhhh.data[0]))
-    
 
-# its not so good its a bit wired
-# input here is 4d matrix with [nbr_diffpatterns][nbr_rotations][nbr_pixels_x][nbr_pixels_y]
+###############################################################################
+# XRD analysis
+###############################################################################
+
+# input is 4d matrix with [nbr_diffpatterns][nbr_rotations][nbr_pixels_x][nbr_pixels_y]
 def COM_voxels_reciproc(data, vect1, vect2, vect3):
-    # define a vector with length of the length of roi on the detector
-    #roix = np.linspace(1, data.shape[2], data.shape[2])
-    ## define a vector with length of the height of roi on the detector
-    #roiy = np.linspace(1,data.shape[3],data.shape[3])
-    #roiz = np.linspace(1,nbr_rot,nbr_rot)    
-    # meshgrids for center of mass calculations
-    #Z, X, Y = np.meshgrid(roix,roiz,roiy)
-    
+
     # meshgrids for center of mass calculations in reciprocal space
-    #TODO why in this order?
+    #TODO correct order?
     Qx,Qz,Qy = np.meshgrid(vect1,vect3,vect2)
-    
-    
-#    COM_hor = np.zeros((nbr_rows,nbr_cols))
-#    COM_ver = np.zeros((nbr_rows,nbr_cols))
-#    COM_rot = np.zeros((nbr_rows,nbr_cols))
-#    COM_mag = np.zeros((nbr_rows,nbr_cols))
-#    COM_ang = np.zeros((nbr_rows,nbr_cols))
-#    index = 0
-#    for row in range(0,nbr_rows):
-#        for col in range(0,nbr_cols):
-#            threshold = 3000   #dont know how to set this threshold. but should be when the data it is summung is just some single photon ocunts on each image
-#            if sum(sum(sum(data[index]))) > threshold:
     
     COM_x = sum(sum(sum(data* Qx)))/sum(sum(sum(data)))
     COM_y = sum(sum(sum(data* Qy)))/sum(sum(sum(data)))
     COM_z = sum(sum(sum(data* Qz)))/sum(sum(sum(data)))
-#            else:
-#                COM_hor[row,col] = 13.616534672254996      # == np.mean(COM_hor) without the if-sats
-#                COM_ver[row,col] = 64.117565383940558
-#                COM_rot[row,col] = 61.397211314625821             
-#                print 'peeeeep'
-#
-#            if row == 0 and col == 0:
-#                bkg_hor = 152.4#65.1#152#COM_hor[row,col] #152.4#
-#                bkg_ver = 101.8#64.6#101#COM_ver[row,col]  #101.8#
-#                bkg_rot = 0
-#            # DPC in polar coordinates. r then phi: . although does not make much sence
-#            COM_mag[row, col] = np.sqrt( (COM_hor[row,col]-bkg_hor)**2 + (COM_ver[row,col]-bkg_ver)**2 + (COM_rot[row,col]-bkg_rot)**2) 
-#            COM_ang[row, col] = np.arctan( (COM_hor[row,col]) / (COM_ver[row,col]))
-#    
-            #index += 1
+
     print 'coordinates in reciprocal space:'
     print COM_x, COM_y, COM_z
     return COM_x, COM_y, COM_z
-
 
 
 # loop through all scanning postitions and move the 3D Bragg peak from the 
@@ -605,7 +570,6 @@ def XRD_analysis():
             
             # plot every other 3d peak and print out the postion of the COM analysis
             #if (position_idx%10=0):
-             #   print 'hej'
     return XRD_x, XRD_z, XRD_y, data_orth_coord
 
 XRD_x, XRD_z, XRD_y, data_orth_coord = XRD_analysis()
@@ -626,6 +590,8 @@ def test_coordShift():
     plt.ylabel('$q_z$ $ (\AA ^{-1}$)')     #q3~qz
     plt.colorbar()        
 #test_coordShift()
+#plot3d_singleBraggpeak(np.log10(hhhh.data[0])) 
+    
 
 def plot_XRD_xyz():
     # plot reciprocal space map x y z 
@@ -675,13 +641,13 @@ def plot_XRD_polar():
     #plt.suptitle(
     plt.subplot(411)
     plt.title('Summed up intensity (bright field)') #sum of all rotations
-    plt.imshow(sum(brightfield[:,:,0:cutXat]), cmap='jet', interpolation='none',extent=extent_motorpos)
+    plt.imshow(sum(brightfield[:,:,0:]), cmap='jet', interpolation='none',extent=extent_motorpos)
     plt.ylabel('y [$\mu m$]')
     #po = plt.colorbar(ticks=(10,20,30,40))#,fraction=0.046, pad=0.04) 
     plt.colorbar()
     # create a mask from the BF matrix, for the RSM analysis
     XRD_mask = np.copy(sum(brightfield))
-    XRD_mask[XRD_mask < 50000 ] = np.nan
+    XRD_mask[XRD_mask < 81000 ] = np.nan
     XRD_mask[XRD_mask > 0] = 1       #make binary, all values not none to 1
 
     # if you want no mask use:
@@ -745,7 +711,7 @@ def XRD_lineplot():
     #plt.title('BF intensity')
     plt.plot(sum(brightfield)[plot,:] )
 
-XRD_lineplot()    
+#XRD_lineplot()    
     
     
 def save_np_array(nparray):
