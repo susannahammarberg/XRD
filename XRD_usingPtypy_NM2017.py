@@ -7,6 +7,7 @@ from ptypy import utils as u
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+from ptypy.experiment.nanomax3d import NanomaxBraggJune2017 # after update need to update spec ptyScan class
 
 # TODO
 # if InP
@@ -376,7 +377,8 @@ def numpy2vtk(data,filename,dx=1.0,dy=1.0,dz=1.0,x0=0.0,y0=0.0,z0=0.0):
 #vtk_out = numpy2vtk(KO,'KOtest.vtk')
 #vtk_out = numpy2vtk(np.log10(a[623,:,140:180,170:240]),'single_braggpeak_log.vtk')
 
-# define q1 q2 q3 and make them global. 
+# define q1 q2 q3 and make them global.
+#TODO  Read in from P
 def def_q_vectors():
     global dq1, dq2, dq3, q_abs
     dq1=0.00027036386641665936    #1/angstrom    dq1=dq2   dthete=0.02 (checked gonphi) (see calculate smapling conditions script)
@@ -474,6 +476,7 @@ def movie_maker2(data, name):
 # test trying to skew the system (the diff data) from the measurement coordinate system (in reciprocal space) to the orthogonal reciprocal space
 # with the help of the ptypy class coordinate_shift in geometry_class.py 
 
+#TODO dont need to create this 
 # need to create this object first with the relevant parameters
 g = ptypy.core.geometry_bragg.Geo_Bragg(
     psize=[ 0.02   ,  0.000055,  0.000055], 
@@ -738,14 +741,16 @@ max_pos = np.argmax(pos_vect)
 plt.figure()
 plt.text(5, np.max(pos_vect), 'Max at: ' + str(max_pos), fontdict=None, withdash=False)
 plt.plot(pos_vect)
+plt.title('Summed intensity as a function of position')
+plt.savefig('SumI_vs_position')
 
 plt.figure()
-plt.imshow(diff_data[max_pos,24])
-plt.title('InP Bragg peak projection with fringes')
+plt.imshow(diff_data[max_pos,5], cmap='jet')
+plt.title('InP Bragg peak projection')
 
 
 # plot this position:
-pos = max_pos +3
+pos = max_pos +0
 # change the coordinate system of this data
 data_orth_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.diff.storages.values()[0], input_space='reciprocal',
                          input_system='natural', keep_dims=True,
@@ -753,7 +758,7 @@ data_orth_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.diff
 # check to see it is fine
 
 plt.figure()
-plt.imshow(data_orth_coord.data[0,24])
+plt.imshow(data_orth_coord.data[0,0])
 plt.title('InP Bragg peak projection with fringes, orth coord')
 
 plot_data = diff_data[pos] #data_orth_coord.data[0]     #data[0]0
@@ -780,7 +785,7 @@ def plot3dvolume(): #  this looks very good, but almost never works
 #def contour3d():   #iso surface
 mlab.figure()
 xmin=q3_orth[0]*1E0; xmax = q3_orth[-1]*1E0; ymin=q2_orth[0]*1E0; ymax=q2_orth[-1]*1E0; zmin=q1_orth[0]*1E0; zmax=q1_orth[-1]*1E0
-obj = mlab.contour3d( plot_data, contours=70, opacity=0.5, transparent=False, extent=[ q1_orth[0], q1_orth[-1],q2_orth[0], q2_orth[-1] , q3_orth[0], q3_orth[-1] ])  #  , vmin=0, vmax=0.8)
+obj = mlab.contour3d( plot_data, contours=10, opacity=0.5, transparent=False, extent=[ q1_orth[0], q1_orth[-1],q2_orth[0], q2_orth[-1] , q3_orth[0], q3_orth[-1] ])  #  , vmin=0, vmax=0.8)
 mlab.axes(ranges=[xmin, xmax, ymin, ymax, zmin, zmax])
 mlab.xlabel('$Q_z$ [$\AA^{-1}$]'); mlab.ylabel('$Q_y$ [$\AA^{-1}$]'); mlab.zlabel('$Q_z$ [$\AA^{-1}$]')
 #C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\scan461_\bragg_peak_stacking\InP\
@@ -792,6 +797,7 @@ def iso_pipeline_plot():
     src = mlab.pipeline.scalar_field(plot_data)  # this creates a regular space data
     mlab.pipeline.iso_surface(src, contours=[diff_data[position].min()+0.1*diff_data[position].ptp(), ], opacity=0.5)
     mlab.show()    
+iso_pipeline_plot()
 
 
 ###############################################################################
