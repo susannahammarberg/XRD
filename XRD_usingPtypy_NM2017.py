@@ -30,6 +30,7 @@ p.io.home = './'
 p.io.autoplot = u.Param()
 p.io.autoplot.layout = 'bragg3d'
 p.io.autoplot.dump = True
+p.io.autoplot.interval=1
 
  
 p.scans = u.Param()
@@ -55,7 +56,7 @@ p.scans.scan01.data.psize = 55e-6
 p.scans.scan01.data.energy = 9.49
 p.scans.scan01.data.distance = 1
 
-#sannas shifting parameters
+# This shifts the entire scan (projection) in real space, in units of steps 
 ##############################################################################
 #S segmented NWs
 ##############################################################################
@@ -119,7 +120,7 @@ metadata = h5py.File( metadata_directory ,'r')
 motorpositions_directory = '/entry%s' %scan_name_string  
 
 # get the list of scans order after gonphi
-def sort_scans_in_gonphi():
+def sort_scans_after_theta():
     gonphi_list = []
     for i in range(0,len(scans)):
         scan_name_int = scans[i]
@@ -136,9 +137,9 @@ def sort_scans_in_gonphi():
         zipped.sort()
         scans_gonphi = [x for y, x in zipped]
     return scans_gonphi
-scans_gonphi = sort_scans_in_gonphi()  
+scans_gonphi = sort_scans_after_theta()  
       
-
+# JW: Define your coordinate system! What are x,y,z, gonphi, and what are their directions
 # calculate mean value of dy
 motorpositiony = np.array(metadata.get(motorpositions_directory + '/measurement/samy'))
 dy = (motorpositiony[-1] - motorpositiony[0])*1./len(motorpositiony)
@@ -160,7 +161,7 @@ extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
 # save masked diffraction patterns
 diff_data = P.diff.storages.values()[0].data*(P.mask.storages.values()[0].data[0])#        (storage_data[:,scan_COM,:,:])
 
-# shape paramter to make code readable
+# save shape paramter to make code readable
 shape = p.scans.scan01.data.shape
 nbr_rot = len(scans)
 
@@ -188,7 +189,7 @@ for jj in range(0,len(scans)):
     #brightfield[jj] = brightfield[jj] / brightfield[jj].max()
 
 
-def plot_BF2d():
+def plot_bright_field():
     interval=8 #plotting interval
     #plot every something 2d bright fields
     for ii in range(0,len(scans),interval):
@@ -211,171 +212,13 @@ def plot_BF2d():
     plt.title('Bright field summed over all positions') 
     plt.xlabel('x [$\mu m$]') 
     plt.ylabel('y [$\mu m$]')
-plot_BF2d()
+plot_bright_field()
 
-
-def bright_field_voxels(data,x,y):
-    index = 0
-    photons = np.zeros((y,x)) 
-    for row in range(0,y):
-        for col in range(0,x):
-            #instead of saving data (0,0), save up all diffpatterns for that position, that is, every 
-            photons[row,col] = sum(sum(sum(data[index,:])))#/ max_intensity
-            index += 1
-            
-    return photons
-brightfield_voxel = bright_field_voxels(diff_data,nbr_cols,nbr_rows)
-
-def make_movie(data):
- #   movie_maker(brightfield)
-    movie_maker(abs((data[:,0]))) 
-#make_movie(diff_data)
-        
-
-def COM2d(data,nbr_cols,nbr_rows):
-    COM_hor = np.zeros((nbr_rot,nbr_rows,nbr_cols))
-    COM_ver = np.zeros((nbr_rot,nbr_rows,nbr_cols))
-    COM_mag = np.zeros((nbr_rot,nbr_rows,nbr_cols))
-    COM_ang = np.zeros((nbr_rot,nbr_rows,nbr_cols))
-
-    # define a vector with length of the length of roi on the detector
-    roix = np.linspace(1, data.shape[1], data.shape[1])
-    ## define a vector with length of the height of roi on the detector
-    roiy = np.linspace(1,data.shape[2],data.shape[2])     #shape 1 or 2 ?
-    # meshgrids for center of mass calculations
-    X, Y = np.meshgrid(roix,roiy)
-    
-    COM_hor = np.zeros((nbr_rows,nbr_cols))
-    COM_ver = np.zeros((nbr_rows,nbr_cols))
-    COM_mag = np.zeros((nbr_rows,nbr_cols))
-    COM_ang = np.zeros((nbr_rows,nbr_cols))
-    index = 0
-    for row in range(0,nbr_rows):
-        for col in range(0,nbr_cols):
-            COM_hor[row,col] = sum(sum(data[index]*X))/sum(sum(data[index]))
-            COM_ver[row,col] = sum(sum(data[index]*Y))/sum(sum(data[index]))
-            if row == 0 and col == 0:
-                bkg_hor = 152.4#65.1#152#COM_hor[row,col] #152.4#
-                bkg_ver = 101.8#64.6#101#COM_ver[row,col]  #101.8#
-                        # DPC in polar coordinates. r then phi:
-            COM_mag[row, col] = np.sqrt( (COM_hor[row,col]-bkg_hor)**2 + (COM_ver[row,col]-bkg_ver)**2) 
-            COM_ang[row, col] = np.arctan( (COM_hor[row,col]) / (COM_ver[row,col]))
-    
-            index += 1
-    return COM_hor, COM_ver, COM_mag, COM_ang
-
-def do_plot_COM2d():
-    for jj in range(0,nbr_rot):
-        l,m,n,o = COM2d(diff_data[:,jj,:,:],nbr_cols,nbr_rows)
-        COM_hor[jj,:,:]=l
-        COM_ver[jj,:,:]=m
-        COM_mag[jj,:,:]=n
-        COM_ang[jj,:,:]=o
-        plt.figure()
-        plt.imshow(o)
-        plt.colorbar()
-#do_plot_COM2d()
-
-# TODO: remove single photon count, if the COM is calculated for very small values like pixels with 1 photon counts, 
-#then the result will be missleading. Set a threshold that keeps the resulting pixel on a mean value, like if sum(sum(sum(diffPattern)))< threshold. sum(sum(sum()))==bkg_value
-
-# input here is 4d matrix with [nbr_diffpatterns][nbr_rotations][nbr_pixels_x][nbr_pixels_y]
-def COM_voxels(data,nbr_cols,nbr_rows):
-    # define a vector with length of the length of roi on the detector
-    roix = np.linspace(1, shape, shape )
-    ## define a vector with length of the height of roi on the detector
-    roiy = np.linspace(1,shape, shape)
-    roiz = np.linspace(1,nbr_rot,nbr_rot)    
-    # meshgrids for center of mass calculations
-    Z, X, Y = np.meshgrid(roix,roiz,roiy)
-    
-    COM_hor = np.zeros((nbr_rows,nbr_cols))
-    COM_ver = np.zeros((nbr_rows,nbr_cols))
-    COM_rot = np.zeros((nbr_rows,nbr_cols))
-    COM_mag = np.zeros((nbr_rows,nbr_cols))
-    COM_ang = np.zeros((nbr_rows,nbr_cols))
-    index = 0
-    for row in range(0,nbr_rows):
-        for col in range(0,nbr_cols):
-            threshold = 3000   #dont know how to set this threshold. but should be when the data it is summung is just some single photon ocunts on each image
-            if sum(sum(sum(data[index]))) > threshold:
-                COM_hor[row,col] = sum(sum(sum(data[index]*X)))/sum(sum(sum(data[index])))
-                COM_ver[row,col] = sum(sum(sum(data[index,:]*Y)))/sum(sum(sum(data[index])))
-                COM_rot[row,col] = sum(sum(sum(data[index,:]*Z)))/sum(sum(sum(data[index])))
-            else:
-                COM_hor[row,col] = 13.616534672254996      # == np.mean(COM_hor) without the if-sats
-                COM_ver[row,col] = 64.117565383940558
-                COM_rot[row,col] = 61.397211314625821             
-                
-            if row == 0 and col == 0:
-                bkg_hor = 152.4#65.1#152#COM_hor[row,col] #152.4#
-                bkg_ver = 101.8#64.6#101#COM_ver[row,col]  #101.8#
-                bkg_rot = 0
-            # DPC in polar coordinates. r then phi: . although does not make much sence
-            COM_mag[row, col] = np.sqrt( (COM_hor[row,col]-bkg_hor)**2 + (COM_ver[row,col]-bkg_ver)**2 + (COM_rot[row,col]-bkg_rot)**2) 
-            COM_ang[row, col] = np.arctan( (COM_hor[row,col]) / (COM_ver[row,col]))
-    
-            index += 1
-    return COM_hor, COM_ver, COM_rot, COM_mag, COM_ang
-
-COM_hor,COM_ver,COM_rot,COM_mag,not_corr_ang = COM_voxels(diff_data,nbr_cols,nbr_rows)
-
-def plot_COM():
-    plt.figure()
-    plt.suptitle('Center of masss analysis')
-    plt.subplot(411)
-    plt.imshow(COM_hor, cmap='jet',interpolation='none',extent=extent_motorpos) 
-    plt.title('COM hor')
-    plt.ylabel('y [$\mu m$]')
-    plt.colorbar()
-    plt.subplot(412)
-    plt.imshow(COM_ver, cmap='jet',interpolation='none',extent=extent_motorpos)
-    plt.title('COM ver')
-    plt.ylabel('y [$\mu m$]')
-    plt.colorbar()
-    plt.subplot(413)
-    plt.imshow(COM_rot, cmap='jet',interpolation='none',extent=extent_motorpos) 
-    plt.title('COM rot')
-    plt.ylabel('y [$\mu m$]')
-    plt.colorbar()
-    plt.subplot(414)
-    plt.title('Bright field (sum of all rotations)')
-    plt.imshow(sum(brightfield), cmap='jet', interpolation='none',extent=extent_motorpos)
-    plt.xlabel('x [$\mu m$]') 
-    plt.ylabel('y [$\mu m$]')
-    plt.colorbar()
-    #plt.savefig("C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\scan461_\COM_3d") 
-    
-plot_COM()
-
+# help function. Makes fast-check-plotting easier. 
 def imshow(data):
     plt.figure()
     plt.imshow(data, cmap='jet')
     plt.colorbar()
-    
-    
-def numpy2vtk(data,filename,dx=1.0,dy=1.0,dz=1.0,x0=0.0,y0=0.0,z0=0.0):
-   # http://www.vtk.org/pdf/file-formats.pdf
-   f=open(filename,'w')
-   nx,ny,nz=data.shape
-   f.write("# vtk DataFile Version 2.0\n")
-   f.write("Test data\n")
-   f.write("ASCII\n")
-   f.write("DATASET STRUCTURED_POINTS\n")
-   f.write("DIMENSIONS %u %u %u\n"%(nz,ny,nx))
-   f.write("SPACING %f %f %f\n"%(dx,dy,dz))
-   f.write("ORIGIN %f %f %f\n"%(x0,y0,z0))
-   f.write("POINT_DATA %u\n"%len(data.flat))
-   f.write("SCALARS volume_scalars float 1\n")
-   f.write("LOOKUP_TABLE default\n")
-   for i in data.flat:
-     f.write("%f "%i)
-   f.close()
-   return ()
-# save vtk file     
-#KO = np.random.randint(1,12,size=(13,8,8))
-#vtk_out = numpy2vtk(KO,'KOtest.vtk')
-#vtk_out = numpy2vtk(np.log10(a[623,:,140:180,170:240]),'single_braggpeak_log.vtk')
 
 # define q1 q2 q3 and make them global.
 #TODO  Read in from P
@@ -402,6 +245,7 @@ def def_q_vectors():
     q2 = np.copy(q1)
 def_q_vectors()
     
+# JW: ? Can you use the terminology from Berenguer? r-system, q-system, etc
 # Plot single position 3d bragg peak in 2d cuts
 # plots the 'naive' Bragg peak (not skewed coordinates) in a single position in 3dim   
 def plot3d_singleBraggpeak(data):    
@@ -426,57 +270,14 @@ def plot3d_singleBraggpeak(data):
     plt.ylabel('$q_3$ $ (\AA ^{-1}$)') 
     plt.colorbar()
     
-    
 plot3d_singleBraggpeak(diff_data[len(diff_data)/2])
 
-
-def movie_maker2(data, name):
-    #figure for animation
-    #fig = plt.figure()
-    # Initialize vector for animation data
-    #ims = []  
-#    for i in range(0,5):#len(data)):
-#        im = plt.imshow(np.log10(data[i]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
-#        #plt.clim(0,4) to change range of colorbar
-#        #im = plt.title('Angle %d'%i)    # does not work for movies
-#        txt = plt.text(0.2,0.8,i)   # (x,y,string)
-#        ims.append([im, txt])
-
-    fig, (ax1, ax2)   = plt.subplots(2,1)  
-    ims = [] 
-    # for x and y index of 1 col
-    #index = 0
-    for index in range(353,367):
-        #for x in range(20,50):
-#            im = plt.imshow(np.log10(data[index]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
-            #plt..subplot(21)
-            im = ax1.imshow(np.log10(data[index+82][0]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
-            #plt.subplot(22)
-            im2 = ax2.imshow(np.log10(data[index+82+82][0]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
-            #plt.subplot(313)
-            #im3 = plt.imshow(np.log10(data[index])[2], animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
-            index += 1
-            #plt.clim(0,4) to change range of colorbar
-            #im = plt.title('Angle %d'%i)    # does not work for movies
- #           txt = plt.text(0.1,0.8,'row: ' + str(y) + ' col: ' + str(x) )  # (x,y,string)
-            #ims.append([[im, im2],txt])
-            ims.append([im, im2])
-                
-    ani = animation.ArtistAnimation(fig, ims, interval=500, blit=True,repeat_delay=0)  
-    plt.axis('off')
-    plt.show()
-    # save animation:
-    ani.save(name +'.mp4', writer="mencoder")    
-#movie_maker2(diff_data[:,22:25],'rot22__InP')
-
-
- 
-    
-    
+##############################################################################
 # test trying to skew the system (the diff data) from the measurement coordinate system (in reciprocal space) to the orthogonal reciprocal space
 # with the help of the ptypy class coordinate_shift in geometry_class.py 
 
-#TODO dont need to create this 
+#TODO dont need to create this, need to find it in P
+
 # need to create this object first with the relevant parameters
 g = ptypy.core.geometry_bragg.Geo_Bragg(
     psize=[ 0.02   ,  0.000055,  0.000055], 
@@ -518,11 +319,18 @@ plt.colorbar()
 # XRD analysis
 ###############################################################################
 
+
+
+# TODO: remove single photon count, if the COM is calculated for very small values like pixels with 1 photon counts, 
+#then the result will be missleading. Set a threshold that keeps the resulting pixel on a mean value, like if sum(sum(sum(diffPattern)))< threshold. sum(sum(sum()))==bkg_value
 # input is 4d matrix with [nbr_diffpatterns][nbr_rotations][nbr_pixels_x][nbr_pixels_y]
 def COM_voxels_reciproc(data, vect1, vect2, vect3):
 
     # meshgrids for center of mass calculations in reciprocal space
     #TODO correct order?
+    #TODO
+    #TODO
+    #TODO
     Qx,Qz,Qy = np.meshgrid(vect1,vect3,vect2)
     
     COM_x = sum(sum(sum(data* Qx)))/sum(sum(sum(data)))
@@ -542,7 +350,7 @@ def XRD_analysis():
     XRD_x = np.zeros((nbr_rows,nbr_cols))
     XRD_z = np.zeros((nbr_rows,nbr_cols))
     XRD_y = np.zeros((nbr_rows,nbr_cols))
-    
+    print 'iiiii'
 
     for row in range(0,nbr_rows):
         for col in range(0,nbr_cols):
@@ -555,7 +363,7 @@ def XRD_analysis():
             # do the 3d COM analysis to find the orthogonal reciprocal space coordinates of each Bragg peak
             #TODO what units comes out of this function?
             COM_x, COM_y, COM_z = COM_voxels_reciproc(data_orth_coord.data[0], q1_orth, q2_orth, q3_orth)
-            
+            print 'COM_x'
             # insert coordinate in reciprocal space maps 
             XRD_x[row,col] = COM_x
             XRD_z[row,col] = COM_z
@@ -568,7 +376,7 @@ def XRD_analysis():
     return XRD_x, XRD_z, XRD_y, data_orth_coord
 
 XRD_x, XRD_z, XRD_y, data_orth_coord = XRD_analysis()
-        
+print 'ituyty'
 #test plot for the coordinate system: (only works for the last position, the other peaks are not saved)
 def test_coordShift():
             
@@ -652,7 +460,7 @@ def plot_XRD_polar():
     #calculate lattice constant a from |q|:                             
     a_lattice_exp = np.pi*2./ XRD_absq *np.sqrt(3)
     mean_strain = np.nanmean(XRD_mask[:,start_cutXat:cutXat]*a_lattice_exp[:,start_cutXat:cutXat])
-    #try with reference strain equal to the center of the largest segment (for InP) # tody try with reference from the other NWs
+    #TODO try with reference strain equal to the center of the largest segment (for InP) # tody try with reference from the other NWs
     #mean_strain = a_lattice_exp[:,start_cutXat:cutXat].max() 
     
     plt.imshow(100*XRD_mask[:,start_cutXat:cutXat]*(a_lattice_exp[:,start_cutXat:cutXat]-mean_strain)/mean_strain, cmap='jet',interpolation='none',extent=extent_motorpos_cut) # not correct!'
@@ -801,5 +609,51 @@ iso_pipeline_plot()
 
 
 ###############################################################################
+# MOVIE makers
+###############################################################################
+
+# calls a movie maker function in another script
+#movie_maker(abs((diff_data[:,0]))) 
+
+# alternative movie maker. 
+def movie_maker2(data, name):
+    #figure for animation
+    #fig = plt.figure()
+    # Initialize vector for animation data
+    #ims = []  
+#    for i in range(0,5):#len(data)):
+#        im = plt.imshow(np.log10(data[i]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
+#        #plt.clim(0,4) to change range of colorbar
+#        #im = plt.title('Angle %d'%i)    # does not work for movies
+#        txt = plt.text(0.2,0.8,i)   # (x,y,string)
+#        ims.append([im, txt])
+
+    fig, (ax1, ax2)   = plt.subplots(2,1)  
+    ims = [] 
+    # for x and y index of 1 col
+    #index = 0
+    for index in range(353,367):
+        #for x in range(20,50):
+#            im = plt.imshow(np.log10(data[index]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
+            #plt..subplot(21)
+            im = ax1.imshow(np.log10(data[index+82][0]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
+            #plt.subplot(22)
+            im2 = ax2.imshow(np.log10(data[index+82+82][0]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
+            #plt.subplot(313)
+            #im3 = plt.imshow(np.log10(data[index])[2], animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
+            index += 1
+            #plt.clim(0,4) to change range of colorbar
+            #im = plt.title('Angle %d'%i)    # does not work for movies
+ #           txt = plt.text(0.1,0.8,'row: ' + str(y) + ' col: ' + str(x) )  # (x,y,string)
+            #ims.append([[im, im2],txt])
+            ims.append([im, im2])
+                
+    ani = animation.ArtistAnimation(fig, ims, interval=500, blit=True,repeat_delay=0)  
+    plt.axis('off')
+    plt.show()
+    # save animation:
+    ani.save(name +'.mp4', writer="mencoder")    
+movie_maker2(diff_data[:,22:25],'rot22__InP')
+
 
 
