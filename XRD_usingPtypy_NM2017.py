@@ -31,7 +31,6 @@ p.io.autoplot = u.Param()
 p.io.autoplot.layout = 'bragg3d'
 p.io.autoplot.dump = True
 p.io.autoplot.interval=1
-
  
 p.scans = u.Param()
 p.scans.scan01 = u.Param()
@@ -119,9 +118,10 @@ metadata_directory = p.scans.scan01.data.datapath + sample + '.h5'
 metadata = h5py.File( metadata_directory ,'r')
 motorpositions_directory = '/entry%s' %scan_name_string  
 
-# get the list of scans order after gonphi
+# get the list of scans order after the gonphi
 def sort_scans_after_theta():
     gonphi_list = []
+    # read in all gonphi postins
     for i in range(0,len(scans)):
         scan_name_int = scans[i]
         scan_name_string = '%d' %scan_name_int 
@@ -131,13 +131,15 @@ def sort_scans_after_theta():
         motorposition_gonphi = np.array(metadata.get(motorpositions_directory + '/measurement/gonphi'))
         gonphi_list.append(motorposition_gonphi[0])
 
-        # order the scan list after gonphi
-        # put them together
-        zipped = zip(gonphi_list,scans)
-        zipped.sort()
-        scans_gonphi = [x for y, x in zipped]
-    return scans_gonphi
-scans_gonphi = sort_scans_after_theta()  
+    # order the scan list after gonphi
+    # first put them together
+    theta_array = 180 - np.array(gonphi_list)
+    zipped = zip(theta_array,scans)
+    # then sort after the first col
+    zipped.sort()
+    #scans_gonphi = [x for y, x in zipped]
+    return zipped
+scans_sorted_theta = sort_scans_after_theta()  
       
 # JW: Define your coordinate system! What are x,y,z, gonphi, and what are their directions
 # calculate mean value of dy
@@ -195,7 +197,7 @@ def plot_bright_field():
     for ii in range(0,len(scans),interval):
         plt.figure()
         plt.imshow(brightfield[ii], cmap='jet', interpolation='none', extent=extent_motorpos) 
-        plt.title('Bright field sorted in gonphi %d'%scans_gonphi[ii])  
+        plt.title('Bright field sorted in gonphi %d'%scans_sorted_theta[ii][1])  
         plt.xlabel('x [$\mu m$]') 
         plt.ylabel('y [$\mu m$]')
         #plt.savefig("BF/scan%d"%scans_gonphi[ii])   
@@ -214,6 +216,55 @@ def plot_bright_field():
     plt.ylabel('y [$\mu m$]')
 plot_bright_field()
 
+
+
+##################################################
+#plot line scan of bright field images (for realigning)
+from scipy.optimize import curve_fit
+from scipy import asarray as ar,exp
+# gaussian fitting to line plots
+interval = 2
+# defines the horizontal roi for the STXM maps
+# first column in scan nbr, 2:nd is start of FWHM, 3rd is end of FWHM
+horizontall_roi = np.zeros((len(scans),3))
+horizontall_roi[:,0] = np.array(scans_sorted_theta)[:,1]
+for ii in range(0,len(scans),interval):
+    y = np.sum(brightfield[ii],1)
+    x = np.arange(len(y))
+    
+    mean = np.sum(x*y)/ sum(y)
+    sigma = np.sqrt( sum( y*(x-mean)**2) / sum(y))
+    def gauss(x, a, x0, sigma):
+        return a * np.exp(-(x - x0)**2 / (2 * sigma**2 ))
+                          
+    popt, pcov = curve_fit( gauss, x,y, p0 =[1, mean, sigma])
+    halfMax = 0.5*popt[0] 
+    fwhm = 2.3548200*popt[2]
+    new_gauss = gauss(x, popt[0],popt[1],popt[2])
+
+    #find x-points of FWHM
+    low  = np.where(new_gauss > halfMax)[0][0]     # replace bisect_left
+    high = np.where(new_gauss >= halfMax)[0][-1] # replace bisect_right #tha last value that is higher the half max
+    #save the x-point in a array 
+    horizontall_roi[ii,1] = low
+    horizontall_roi[ii,2] = high
+    plt.figure()
+    plt.plot( y, label='line cut')
+    plt.plot( x, gauss(x,*popt),'r:', label='Gaussian fit')
+    plt.plot(x,[halfMax]*len(x))
+    plt.plot(low,halfMax,'yo')
+    plt.plot(high,halfMax,'yo')
+    plt.legend()
+    plt.title('Line plots of BF maps with Gauss fits')
+
+
+# find center of mass in image    
+import scipy.ndimage.measurements
+img = np.array(dataset[0])
+ic, jc = map(int, scipy.ndimage.measurements.center_of_mass(img))
+##################################################
+    
+    
 # help function. Makes fast-check-plotting easier. 
 def imshow(data):
     plt.figure()
@@ -532,6 +583,7 @@ def rocking_curve_plot():
     plt.figure(); plt.plot((np.sum(np.sum(diff_data[index_max],axis=1),axis=1)))
     plt.yscale('log')
     plt.title('Rocking curve at highest-intensity point')
+    scans_sorted_theta[max_pos][1]
     plt.ylabel('Photon counts');plt.xlabel('Rotation $\Theta$ ($\degree$)')
     plt.grid(True)
 rocking_curve_plot()
@@ -550,7 +602,7 @@ plt.figure()
 plt.text(5, np.max(pos_vect), 'Max at: ' + str(max_pos), fontdict=None, withdash=False)
 plt.plot(pos_vect)
 plt.title('Summed intensity as a function of position')
-plt.savefig('SumI_vs_position')
+#plt.savefig('SumI_vs_position')
 
 plt.figure()
 plt.imshow(diff_data[max_pos,5], cmap='jet')
@@ -616,44 +668,52 @@ iso_pipeline_plot()
 #movie_maker(abs((diff_data[:,0]))) 
 
 # alternative movie maker. 
-def movie_maker2(data, name):
-    #figure for animation
-    #fig = plt.figure()
-    # Initialize vector for animation data
-    #ims = []  
-#    for i in range(0,5):#len(data)):
-#        im = plt.imshow(np.log10(data[i]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
-#        #plt.clim(0,4) to change range of colorbar
-#        #im = plt.title('Angle %d'%i)    # does not work for movies
-#        txt = plt.text(0.2,0.8,i)   # (x,y,string)
-#        ims.append([im, txt])
-
-    fig, (ax1, ax2)   = plt.subplots(2,1)  
-    ims = [] 
-    # for x and y index of 1 col
-    #index = 0
-    for index in range(353,367):
-        #for x in range(20,50):
-#            im = plt.imshow(np.log10(data[index]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
-            #plt..subplot(21)
-            im = ax1.imshow(np.log10(data[index+82][0]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
-            #plt.subplot(22)
-            im2 = ax2.imshow(np.log10(data[index+82+82][0]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
-            #plt.subplot(313)
-            #im3 = plt.imshow(np.log10(data[index])[2], animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
-            index += 1
-            #plt.clim(0,4) to change range of colorbar
-            #im = plt.title('Angle %d'%i)    # does not work for movies
- #           txt = plt.text(0.1,0.8,'row: ' + str(y) + ' col: ' + str(x) )  # (x,y,string)
-            #ims.append([[im, im2],txt])
-            ims.append([im, im2])
-                
-    ani = animation.ArtistAnimation(fig, ims, interval=500, blit=True,repeat_delay=0)  
-    plt.axis('off')
-    plt.show()
-    # save animation:
-    ani.save(name +'.mp4', writer="mencoder")    
-movie_maker2(diff_data[:,22:25],'rot22__InP')
-
+def movie_maker2(data, name, nbr_plots):
+    if nbr_plots == 1:
+        #figure for animation
+        fig = plt.figure()
+        # Initialize vector for animation data
+        ims = []  
+        index = 0
+        for y in range(0,nbr_rows):
+            for x in range(0,nbr_cols):
+                im = plt.imshow(np.log10(data[index][0]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
+    #        #plt.clim(0,4) to change range of colorbar
+    #        im = plt.title('Col %d'%i)    # does not work for movies
+    #        txt = plt.text(0.2,0.8,i)   # (x,y,string)
+                ims.append([im])    #ims.append([im, txt])
+        ani = animation.ArtistAnimation(fig, ims, interval=1000, blit=True,repeat_delay=0)  
+        txt = plt.text(0.1,0.8,'row: ' + str(y) + ' col: ' + str(x) )  # (x,y,string)
+        ims.append([[im],txt])
+        plt.axis('on')
+        plt.show()
+        # save animation:
+        ani.save(name +'.mp4', writer="mencoder") 
+    elif nbr_plots == 2:           
+        fig, (ax1, ax2)   = plt.subplots(2,1)  
+        ims = [] 
+        # for x and y index of 1 col
+        #index = 0
+        for index in range(5,5+21):
+            #for x in range(20,50):
+    #            im = plt.imshow(np.log10(data[index]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
+                #plt..subplot(21)
+                im = ax1.imshow(np.log10(data[index][0]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
+                #plt.subplot(22)
+                im2 = ax2.imshow(np.log10(data[index][0]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
+                #plt.subplot(313)
+                #im3 = plt.imshow(np.log10(data[index])[2], animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
+                index += 1
+                #plt.clim(0,4) to change range of colorbar
+                #im = plt.title('Angle %d'%i)    # does not work for movies
+     #           txt = plt.text(0.1,0.8,'row: ' + str(y) + ' col: ' + str(x) )  # (x,y,string)
+                #ims.append([[im, im2],txt])
+                ims.append([im, im2])           
+        ani = animation.ArtistAnimation(fig, ims, interval=1000, blit=True,repeat_delay=0)  
+        plt.axis('on')
+        plt.show()
+        # save animation:
+        ani.save(name +'.mp4', writer="mencoder")    
+movie_maker2(diff_data,'Merlin_192_222_middle_row_Bragg_angle_colontimeaxis', nbr_plots=1)
 
 
