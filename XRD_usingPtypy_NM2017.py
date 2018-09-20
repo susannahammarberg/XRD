@@ -61,8 +61,8 @@ p.scans.scan01.data.distance = 1
 ##############################################################################
 # the smallers values here (minus values) will include the 0:th scanning position
 ##TODO test with no shifting and compare result: [0]*51 #
-#p.scans.scan01.data.vertical_shift =  [-1,-1,0,0,0,  0,0,2,1,0,  1,1,1,0,-1,  -1,-1,-1,-1,0,  -1,-1,0,0,1,  1,-1,0,1,0,   2,0,0,1,1,  1,0,0,1,1,  1,2,2,2,4,  3,3,3,3,3,   3]
-#p.scans.scan01.data.horizontal_shift =  [3,2,0,1,2,  3,4,3,4,5,  5,6,6,5,6,  5,4,7,8,8,  8,8,10,11,12,  11,12,12,11,12,  12,11,12,13,13,  14,15,14,14,14,  13,15,16,15,14,  17,19,18,18,17,   17]
+#p.scans.scan01.data.horizontal_shift =  [-1,-1,0,0,0,  0,0,2,1,0,  1,1,1,0,-1,  -1,-1,-1,-1,0,  -1,-1,0,0,1,  1,-1,0,1,0,   2,0,0,1,1,  1,0,0,1,1,  1,2,2,2,4,  3,3,3,3,3,   3]
+#p.scans.scan01.data.vertical_shift =  [3,2,0,1,2,  3,4,3,4,5,  5,6,6,5,6,  5,4,7,8,8,  8,8,10,11,12,  11,12,12,11,12,  12,11,12,13,13,  14,15,14,14,14,  13,15,16,15,14,  17,19,18,18,17,   17]
             # InGaP = [116:266,234:384]
             # InP = [116:266,80:230]
 #p.scans.scan01.data.detector_roi_indices = [116,266,80,230]  #[116,266,80,230]  #    # this one should not be needed since u have shape and center...
@@ -70,11 +70,16 @@ p.scans.scan01.data.distance = 1
 ##############################################################################
 # homogenius NWs
 ##############################################################################
+p.scans.scan01.data.horizontal_shift = [1] * len(scans) 
 #p.scans.scan01.data.vertical_shift = [1] * len(scans) 
-#p.scans.scan01.data.horizontal_shift = [1] * len(scans) 
+            # referens ska vara 0, alla andra -
+            #open this file
+p.scans.scan01.data.vertical_shift = list(-np.load('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\ptycho_192_222\\vertical_shift_vector.npy'))
+
+
             
-p.scans.scan01.data.vertical_shift = [ 0, 0, 1, 2, 2, 2, 3, 3, 3, 1, 0, 0, 0, 0, 0, -2, -2, -2, -3, -3, -2, -2,  -3, -2, -3, -3,  -4]
-p.scans.scan01.data.horizontal_shift = [ -8, -8, -8, -8, -8, -3, -2, -4, 0, -5, -3, -6, -3, -6, -3, -5, -5, -7, -4,  -7, -3, -6, -2, -7, -2, -6, -3 ] 
+#p.scans.scan01.data.horizontal_shift = [ 0, 0, 1, 2, 2, 2, 3, 3, 3, 1, 0, 0, 0, 0, 0, -2, -2, -2, -3, -3, -2, -2,  -3, -2, -3, -3,  -4]
+#p.scans.scan01.data.vertical_shift = [ -8, -8, -8, -8, -8, -3, -2, -4, 0, -5, -3, -6, -3, -6, -3, -5, -5, -7, -4,  -7, -3, -6, -2, -7, -2, -6, -3 ] 
 p.scans.scan01.data.detector_roi_indices = [275,425,150,300]  # this one should not be needed since u have shape and center...
 
 p.scans.scan01.illumination = u.Param()
@@ -152,8 +157,8 @@ motorpositionx_AdLink = np.trim_zeros(motorpositionx_AdLink)
 dx = (motorpositionx_AdLink[-1] - motorpositionx_AdLink[0])*1./ len(motorpositionx_AdLink)
 
 # calc number of rows and cols that is used from measuremtn after realigning postions
-nbr_rows = len(motorpositiony) -(np.max(p.scans.scan01.data.vertical_shift) - np.min(p.scans.scan01.data.vertical_shift))                        
-nbr_cols = len(motorpositionx_AdLink)-(np.max(p.scans.scan01.data.horizontal_shift) - np.min(p.scans.scan01.data.horizontal_shift))
+nbr_rows = len(motorpositiony) -(np.max(p.scans.scan01.data.horizontal_shift) - np.min(p.scans.scan01.data.horizontal_shift))                        
+nbr_cols = len(motorpositionx_AdLink)-(np.max(p.scans.scan01.data.vertical_shift) - np.min(p.scans.scan01.data.vertical_shift)
 
 
 extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
@@ -192,7 +197,7 @@ for jj in range(0,len(scans)):
 
 
 def plot_bright_field():
-    interval=8 #plotting interval
+    interval=1 #plotting interval
     #plot every something 2d bright fields
     for ii in range(0,len(scans),interval):
         plt.figure()
@@ -220,48 +225,46 @@ plot_bright_field()
 
 ##################################################
 #plot line scan of bright field images (for realigning)
-from scipy.optimize import curve_fit
-from scipy import asarray as ar,exp
-# gaussian fitting to line plots
-interval = 2
-# defines the horizontal roi for the STXM maps
-# first column in scan nbr, 2:nd is start of FWHM, 3rd is end of FWHM
-horizontall_roi = np.zeros((len(scans),3))
-horizontall_roi[:,0] = np.array(scans_sorted_theta)[:,1]
-for ii in range(0,len(scans),interval):
-    y = np.sum(brightfield[ii],1)
-    x = np.arange(len(y))
-    
-    mean = np.sum(x*y)/ sum(y)
-    sigma = np.sqrt( sum( y*(x-mean)**2) / sum(y))
-    def gauss(x, a, x0, sigma):
-        return a * np.exp(-(x - x0)**2 / (2 * sigma**2 ))
-                          
-    popt, pcov = curve_fit( gauss, x,y, p0 =[1, mean, sigma])
-    halfMax = 0.5*popt[0] 
-    fwhm = 2.3548200*popt[2]
-    new_gauss = gauss(x, popt[0],popt[1],popt[2])
+# Dont use this because i realized it is better to use the Pil COM as 
+# reference than Merlin. (And also I use Center of mass and not a gaussian fit)
+#from scipy.optimize import curve_fit
+#from scipy import asarray as ar,exp
+## gaussian fitting to line plots
+#interval = 2
+## defines the horizontal roi for the STXM maps
+## first column in scan nbr, 2:nd is start of FWHM, 3rd is end of FWHM
+#horizontall_roi = np.zeros((len(scans),3))
+#horizontall_roi[:,0] = np.array(scans_sorted_theta)[:,1]
+#for ii in range(0,len(scans),interval):
+#    y = np.sum(brightfield[ii],1)
+#    x = np.arange(len(y))
+#    
+#    mean = np.sum(x*y)/ sum(y)
+#    sigma = np.sqrt( sum( y*(x-mean)**2) / sum(y))
+#    def gauss(x, a, x0, sigma):
+#        return a * np.exp(-(x - x0)**2 / (2 * sigma**2 ))
+#                          
+#    popt, pcov = curve_fit( gauss, x,y, p0 =[1, mean, sigma])
+#    halfMax = 0.5*popt[0] 
+#    fwhm = 2.3548200*popt[2]
+#    new_gauss = gauss(x, popt[0],popt[1],popt[2])
+#
+#    #find x-points of FWHM
+#    low  = np.where(new_gauss > halfMax)[0][0]     # replace bisect_left
+#    high = np.where(new_gauss >= halfMax)[0][-1] # replace bisect_right #tha last value that is higher the half max
+#    #save the x-point in a array 
+#    horizontall_roi[ii,1] = low
+#    horizontall_roi[ii,2] = high
+#    plt.figure()
+#    plt.plot( y, label='line cut')
+#    plt.plot( x, gauss(x,*popt),'r:', label='Gaussian fit')
+#    plt.plot(x,[halfMax]*len(x))
+#    plt.plot(low,halfMax,'yo')
+#    plt.plot(high,halfMax,'yo')
+#    plt.legend()
+#    plt.title('Line plots of BF maps with Gauss fits')
 
-    #find x-points of FWHM
-    low  = np.where(new_gauss > halfMax)[0][0]     # replace bisect_left
-    high = np.where(new_gauss >= halfMax)[0][-1] # replace bisect_right #tha last value that is higher the half max
-    #save the x-point in a array 
-    horizontall_roi[ii,1] = low
-    horizontall_roi[ii,2] = high
-    plt.figure()
-    plt.plot( y, label='line cut')
-    plt.plot( x, gauss(x,*popt),'r:', label='Gaussian fit')
-    plt.plot(x,[halfMax]*len(x))
-    plt.plot(low,halfMax,'yo')
-    plt.plot(high,halfMax,'yo')
-    plt.legend()
-    plt.title('Line plots of BF maps with Gauss fits')
 
-
-# find center of mass in image    
-import scipy.ndimage.measurements
-img = np.array(dataset[0])
-ic, jc = map(int, scipy.ndimage.measurements.center_of_mass(img))
 ##################################################
     
     
