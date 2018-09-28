@@ -22,7 +22,7 @@ sample = 'JWX33_NW2'; scans = range(192, 200+1)+range(205, 222+1)
 
 p.data_type = "single"   #or "double"
 # for verbose output
-p.verbose_level = 0
+p.verbose_level = 5
 
 # use special plot layout for 3d data  (but the io.home part tells ptypy where to save recons and dumps)
 p.io = u.Param()
@@ -61,8 +61,8 @@ p.scans.scan01.data.distance = 1
 ##############################################################################
 # the smallers values here (minus values) will include the 0:th scanning position
 ##TODO test with no shifting and compare result: [0]*51 #
-#p.scans.scan01.data.horizontal_shift =  [-1,-1,0,0,0,  0,0,2,1,0,  1,1,1,0,-1,  -1,-1,-1,-1,0,  -1,-1,0,0,1,  1,-1,0,1,0,   2,0,0,1,1,  1,0,0,1,1,  1,2,2,2,4,  3,3,3,3,3,   3]
-#p.scans.scan01.data.vertical_shift =  [3,2,0,1,2,  3,4,3,4,5,  5,6,6,5,6,  5,4,7,8,8,  8,8,10,11,12,  11,12,12,11,12,  12,11,12,13,13,  14,15,14,14,14,  13,15,16,15,14,  17,19,18,18,17,   17]
+#p.scans.scan01.data.vertical_shift =  [-1,-1,0,0,0,  0,0,2,1,0,  1,1,1,0,-1,  -1,-1,-1,-1,0,  -1,-1,0,0,1,  1,-1,0,1,0,   2,0,0,1,1,  1,0,0,1,1,  1,2,2,2,4,  3,3,3,3,3,   3]
+#p.scans.scan01.data.horizontal_shift =  [3,2,0,1,2,  3,4,3,4,5,  5,6,6,5,6,  5,4,7,8,8,  8,8,10,11,12,  11,12,12,11,12,  12,11,12,13,13,  14,15,14,14,14,  13,15,16,15,14,  17,19,18,18,17,   17]
             # InGaP = [116:266,234:384]
             # InP = [116:266,80:230]
 #p.scans.scan01.data.detector_roi_indices = [116,266,80,230]  #[116,266,80,230]  #    # this one should not be needed since u have shape and center...
@@ -70,16 +70,18 @@ p.scans.scan01.data.distance = 1
 ##############################################################################
 # homogenius NWs
 ##############################################################################
-p.scans.scan01.data.horizontal_shift = [1] * len(scans) 
 #p.scans.scan01.data.vertical_shift = [1] * len(scans) 
+#p.scans.scan01.data.horizontal_shift = [1] * len(scans) 
             # referens ska vara 0, alla andra -
             #open this file
-p.scans.scan01.data.vertical_shift = list(-np.load('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\ptycho_192_222\\vertical_shift_vector.npy'))
-
-
+# when it says horizontal i have used vertical because i am an ii
+# I will just have fo change the names everywhere             
+p.scans.scan01.data.horizontal_shift = list(np.load('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\ptycho_192_222\\horizontal_shift_vector.npy'))
+#vertical_shift_vector
+p.scans.scan01.data.vertical_shift = list(np.load('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\ptycho_192_222\\vertical_shift_vector.npy'))
             
-#p.scans.scan01.data.horizontal_shift = [ 0, 0, 1, 2, 2, 2, 3, 3, 3, 1, 0, 0, 0, 0, 0, -2, -2, -2, -3, -3, -2, -2,  -3, -2, -3, -3,  -4]
-#p.scans.scan01.data.vertical_shift = [ -8, -8, -8, -8, -8, -3, -2, -4, 0, -5, -3, -6, -3, -6, -3, -5, -5, -7, -4,  -7, -3, -6, -2, -7, -2, -6, -3 ] 
+#p.scans.scan01.data.vertical_shift = [ 0, 0, 1, 2, 2, 2, 3, 3, 3, 1, 0, 0, 0, 0, 0, -2, -2, -2, -3, -3, -2, -2,  -3, -2, -3, -3,  -4]
+#p.scans.scan01.data.horizontal_shift = [ -8, -8, -8, -8, -8, -3, -2, -4, 0, -5, -3, -6, -3, -6, -3, -5, -5, -7, -4,  -7, -3, -6, -2, -7, -2, -6, -3 ] 
 p.scans.scan01.data.detector_roi_indices = [275,425,150,300]  # this one should not be needed since u have shape and center...
 
 p.scans.scan01.illumination = u.Param()
@@ -157,8 +159,8 @@ motorpositionx_AdLink = np.trim_zeros(motorpositionx_AdLink)
 dx = (motorpositionx_AdLink[-1] - motorpositionx_AdLink[0])*1./ len(motorpositionx_AdLink)
 
 # calc number of rows and cols that is used from measuremtn after realigning postions
-nbr_rows = len(motorpositiony) -(np.max(p.scans.scan01.data.horizontal_shift) - np.min(p.scans.scan01.data.horizontal_shift))                        
-nbr_cols = len(motorpositionx_AdLink)-(np.max(p.scans.scan01.data.vertical_shift) - np.min(p.scans.scan01.data.vertical_shift)
+nbr_rows = len(motorpositiony) -(np.max(p.scans.scan01.data.vertical_shift) - np.min(p.scans.scan01.data.vertical_shift))                        
+nbr_cols = len(motorpositionx_AdLink)-(np.max(p.scans.scan01.data.horizontal_shift) - np.min(p.scans.scan01.data.horizontal_shift))
 
 
 extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
@@ -201,10 +203,11 @@ def plot_bright_field():
     #plot every something 2d bright fields
     for ii in range(0,len(scans),interval):
         plt.figure()
-        plt.imshow(brightfield[ii], cmap='jet', interpolation='none', extent=extent_motorpos) 
+        plt.imshow(brightfield[ii], cmap='gray', interpolation='none', extent=extent_motorpos) 
         plt.title('Bright field sorted in gonphi %d'%scans_sorted_theta[ii][1])  
         plt.xlabel('x [$\mu m$]') 
         plt.ylabel('y [$\mu m$]')
+        #plt.savefig('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\ptycho_192_222\BF_Merlin_hor_ver_aligned\\scan%d'%((scans[ii])), bbox_inches='tight')
         #plt.savefig("BF/scan%d"%scans_gonphi[ii])   
     # plot average bright field image (average over rotation)
     plt.figure()
@@ -294,7 +297,7 @@ def def_q_vectors():
     dq3= np.deg2rad(0.02) * q_abs
     global q3, q1, q2
     
-    q3 = np.linspace(-dq3*len(scans)/2+q_abs, dq3*len(scans)/2+q_abs, len(scans))    
+    q3 = np.linspace(-dq3*len(scans)/2.+q_abs, dq3*len(scans)/2+q_abs, len(scans))    
     q1 = np.linspace(-dq1*shape/2, dq1*shape/2, shape)
     q2 = np.copy(q1)
 def_q_vectors()
@@ -306,20 +309,20 @@ def plot3d_singleBraggpeak(data):
     plt.figure()
     plt.suptitle('Single position Bragg peak')
     plt.subplot(221)
-    plt.imshow((abs((data[data.shape[0]/2,:,:]))), cmap='jet', interpolation='none', extent=[ -dq1*shape/2, dq1*shape/2, -dq1*shape/2, dq1*shape/2]) 
+    plt.imshow((abs((data[data.shape[0]/2.,:,:]))), cmap='jet', interpolation='none', extent=[ -dq1*shape/2, dq1*shape/2, -dq1*shape/2, dq1*shape/2]) 
     plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_2$ $ (\AA ^{-1}$)') 
     plt.colorbar()
     # OBS FIRST AXIS IS Y
     plt.subplot(222)
     #plt.title('-axis')
-    plt.imshow(abs(data[:,data.shape[1]/2,:]), cmap='jet', interpolation='none', extent=[  -dq1*shape/2, dq1*shape/2, -dq3*nbr_rot/2+q_abs, dq3*nbr_rot/2+q_abs]) 
+    plt.imshow(abs(data[:,data.shape[1]/2.,:]), cmap='jet', interpolation='none', extent=[  -dq1*shape/2, dq1*shape/2, -dq3*nbr_rot/2+q_abs, dq3*nbr_rot/2+q_abs]) 
     plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_3$ $ (\AA ^{-1}$)') 
     plt.colorbar()
     plt.subplot(223)
     #plt.title('-axis')
-    plt.imshow((abs(data[:,:,shape/2])), cmap='jet', interpolation='none', extent=[ -dq1*shape/2, dq1*shape/2,-dq3*nbr_rot/2+q_abs, dq3*nbr_rot/2+q_abs]) 
+    plt.imshow((abs(data[:,:,shape/2.])), cmap='jet', interpolation='none', extent=[ -dq1*shape/2, dq1*shape/2,-dq3*nbr_rot/2+q_abs, dq3*nbr_rot/2+q_abs]) 
     plt.xlabel('$q_2$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_3$ $ (\AA ^{-1}$)') 
     plt.colorbar()
@@ -330,16 +333,8 @@ plot3d_singleBraggpeak(diff_data[len(diff_data)/2])
 # test trying to skew the system (the diff data) from the measurement coordinate system (in reciprocal space) to the orthogonal reciprocal space
 # with the help of the ptypy class coordinate_shift in geometry_class.py 
 
-#TODO dont need to create this, need to find it in P
-
-# need to create this object first with the relevant parameters
-g = ptypy.core.geometry_bragg.Geo_Bragg(
-    psize=[ 0.02   ,  0.000055,  0.000055], 
-    shape=[ len(scans), 150, 150] ,
-    energy=9.49,
-    distance=1, 
-    theta_bragg=12)
-
+# one geometry connected to each POD but it this case it is the same for each pod.
+g = P.pods.values()[0].geometry
 P.diff.storages.values()[0].data = P.diff.storages.values()[0].data * P.mask.storages.values()[0].data
 # Choose postion:
 position = len(diff_data)/2
@@ -430,7 +425,7 @@ def XRD_analysis():
     return XRD_x, XRD_z, XRD_y, data_orth_coord
 
 XRD_x, XRD_z, XRD_y, data_orth_coord = XRD_analysis()
-print 'ituyty'
+
 #test plot for the coordinate system: (only works for the last position, the other peaks are not saved)
 def test_coordShift():
             
@@ -513,6 +508,8 @@ def plot_XRD_polar():
     plt.subplot(412)   
     #calculate lattice constant a from |q|:                             
     a_lattice_exp = np.pi*2./ XRD_absq *np.sqrt(3)
+    imshow(a_lattice_exp)
+    plt.title('Lattice conastant a [$\AA$]')
     mean_strain = np.nanmean(XRD_mask[:,start_cutXat:cutXat]*a_lattice_exp[:,start_cutXat:cutXat])
     #TODO try with reference strain equal to the center of the largest segment (for InP) # tody try with reference from the other NWs
     #mean_strain = a_lattice_exp[:,start_cutXat:cutXat].max() 
@@ -586,7 +583,7 @@ def rocking_curve_plot():
     plt.figure(); plt.plot((np.sum(np.sum(diff_data[index_max],axis=1),axis=1)))
     plt.yscale('log')
     plt.title('Rocking curve at highest-intensity point')
-    scans_sorted_theta[max_pos][1]
+    
     plt.ylabel('Photon counts');plt.xlabel('Rotation $\Theta$ ($\degree$)')
     plt.grid(True)
 rocking_curve_plot()
@@ -662,33 +659,35 @@ def iso_pipeline_plot():
     mlab.show()    
 iso_pipeline_plot()
 
-
+ 
 ###############################################################################
 # MOVIE makers
 ###############################################################################
 
 # calls a movie maker function in another script
-#movie_maker(abs((diff_data[:,0]))) 
+#movie_maker(abs((diff_data[:,13])),'all_poitions_S192') 
 
 # alternative movie maker. 
-def movie_maker2(data, name, nbr_plots):
+def movie_maker2(data, name, rotation_nbr, nbr_plots):
     if nbr_plots == 1:
         #figure for animation
         fig = plt.figure()
         # Initialize vector for animation data
         ims = []  
         index = 0
-        for y in range(0,nbr_rows):
-            for x in range(0,nbr_cols):
-                im = plt.imshow(np.log10(data[index][0]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
+        for ii in range(0,len(data)):
+
+                
+                im = plt.imshow(np.log10(data[index][rotation_nbr]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
     #        #plt.clim(0,4) to change range of colorbar
     #        im = plt.title('Col %d'%i)    # does not work for movies
     #        txt = plt.text(0.2,0.8,i)   # (x,y,string)
                 ims.append([im])    #ims.append([im, txt])
-        ani = animation.ArtistAnimation(fig, ims, interval=1000, blit=True,repeat_delay=0)  
-        txt = plt.text(0.1,0.8,'row: ' + str(y) + ' col: ' + str(x) )  # (x,y,string)
-        ims.append([[im],txt])
-        plt.axis('on')
+        ani = animation.ArtistAnimation(fig, ims, interval=500, blit=True,repeat_delay=0)  
+        #txt = plt.text(0.1,0.8,'row: ' + str(y) + ' col: ' + str(x) )  # (x,y,string)
+        ims.append([im])
+        #ims.append([[im],txt])
+        plt.axis('off')
         plt.show()
         # save animation:
         ani.save(name +'.mp4', writer="mencoder") 
@@ -701,9 +700,9 @@ def movie_maker2(data, name, nbr_plots):
             #for x in range(20,50):
     #            im = plt.imshow(np.log10(data[index]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
                 #plt..subplot(21)
-                im = ax1.imshow(np.log10(data[index][0]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
+                im = ax1.imshow(np.log10(data[index][rotation_nbr]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
                 #plt.subplot(22)
-                im2 = ax2.imshow(np.log10(data[index][0]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
+                im2 = ax2.imshow(np.log10(data[index][rotation_nbr]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
                 #plt.subplot(313)
                 #im3 = plt.imshow(np.log10(data[index])[2], animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
                 index += 1
@@ -712,11 +711,10 @@ def movie_maker2(data, name, nbr_plots):
      #           txt = plt.text(0.1,0.8,'row: ' + str(y) + ' col: ' + str(x) )  # (x,y,string)
                 #ims.append([[im, im2],txt])
                 ims.append([im, im2])           
-        ani = animation.ArtistAnimation(fig, ims, interval=1000, blit=True,repeat_delay=0)  
+        ani = animation.ArtistAnimation(fig, ims, interval=500, blit=True,repeat_delay=0)  
         plt.axis('on')
         plt.show()
         # save animation:
-        ani.save(name +'.mp4', writer="mencoder")    
-movie_maker2(diff_data,'Merlin_192_222_middle_row_Bragg_angle_colontimeaxis', nbr_plots=1)
-
-
+        #ani.save(name +'.mp4', writer="mencoder")    
+movie_maker2(diff_data,'all_diff_data_S192',rotation_nbr=13, nbr_plots=1)
+# TODO read out scan number from scans_sorted_theta
