@@ -291,11 +291,11 @@ def imshow(data):
     
 # define q1 q2 q3, are they + q_Abs in the geometry function? 
 def def_q_vectors():
-    global dq1, dq2, dq3, q_abs
     global q3, q1, q2
     
-    q3 = np.linspace(-dq3*g.shape[0]/2.+q_abs, dq3*g.shape[0]/2.+q_abs, g.shape[0])    
-    q1 = np.linspace(-dq1*g.shape[-1]/2., dq1*g.shape[-1]/2., g.shape[-1])
+    # why did I have -q_abs here?? q3 = np.linspace(-g.dq3*g.shape[0]/2.+q_abs, g.dq3*g.shape[0]/2.+q_abs, g.shape[0])    
+    q3 = np.linspace(-g.dq3*g.shape[0]/2., g.dq3*g.shape[0]/2., g.shape[0])    
+    q1 = np.linspace(-g.dq1*g.shape[-1]/2., g.dq1*g.shape[-1]/2., g.shape[-1])
     q2 = np.copy(q1)
 def_q_vectors()
     
