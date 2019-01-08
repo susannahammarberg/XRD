@@ -149,7 +149,7 @@ def sort_scans_after_theta():
     zipped.sort()
     # Now, because gonphi is gonphi = 180 - theta, and the data is sorted with higher gonphi,
     # for this list to correspond to how the data is sorted in diffdata, this list should be reversed
-    zipped = np.flipud(scans_sorted_theta)
+    zipped = np.flipud(zipped)
     return zipped
 scans_sorted_theta = sort_scans_after_theta()  
       
@@ -179,7 +179,7 @@ extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
 diff_data = P.diff.storages.values()[0].data*(P.mask.storages.values()[0].data[0])#        (storage_data[:,scan_COM,:,:])
 
 # save shape paramter to make code readable
-shape = p.scans.scan01.data.shape
+shape = P.diff.storages.values()[0].data.shape
 nbr_rot = len(scans)
 
 # plot the sum of all used diffraction images
