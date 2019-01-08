@@ -178,8 +178,9 @@ extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
 # in diff data the rotations are sorted according to gonphi, starting with the LOWEST GONPHI which is the reversed of theta. Hence, diff_data[0] is is theta=12.16 and scan=222 
 diff_data = P.diff.storages.values()[0].data*(P.mask.storages.values()[0].data[0])#        (storage_data[:,scan_COM,:,:])
 
-nbr_rot = len(scans)
-
+# load the geometry instance to acces the geometry parameters
+# one geometry connected to each POD but it this case it is the same for each pod (since its all from the same measurement, same setup. Everything is the same, psixe energy, distance etc)
+g = P.pods.values()[0].geometry
 # plot the sum of all used diffraction images
 plt.figure()
 plt.imshow(np.log10(sum(sum(diff_data))),cmap='jet', interpolation='none')
@@ -246,11 +247,13 @@ def imshow(data):
     plt.colorbar()
     
 # define q1 q2 q3, are they + q_Abs in the geometry function? 
+
 def def_q_vectors():
     global q3, q1, q2
     
-    # why did I have -q_abs here?? q3 = np.linspace(-g.dq3*g.shape[0]/2.+q_abs, g.dq3*g.shape[0]/2.+q_abs, g.shape[0])    
-    q3 = np.linspace(-g.dq3*g.shape[0]/2., g.dq3*g.shape[0]/2., g.shape[0])    
+    # can i find q_abs in ther geometry? what is the unit!!?
+    q_abs = 4 * np.pi / g.lam * g.sintheta     *1E-10
+    q3 = np.linspace(-g.dq3*g.shape[0]/2.+q_abs, g.dq3*g.shape[0]/2.+q_abs, g.shape[0])    
     q1 = np.linspace(-g.dq1*g.shape[-1]/2., g.dq1*g.shape[-1]/2., g.shape[-1])
     q2 = np.copy(q1)
 def_q_vectors()
@@ -259,17 +262,18 @@ def_q_vectors()
 # Plot single position 3d bragg peak in 2d cuts
 # plots the 'naive' Bragg peak (not skewed coordinates) in a single position in 3dim   
 def plot3d_singleBraggpeak(data):    
+    # find where the peak is in 
     plt.figure()
     plt.suptitle('Naive plot of single position Bragg peak (Berenguer terminology)')
     plt.subplot(221)
-    plt.imshow((abs((data[data.shape[0]/2,:,2:60]))), cmap='jet', interpolation='none')#, extent=[ -dq1*shape/2, dq1*shape/2, -dq1*shape/2, dq1*shape/2]) #use g.shape[-1] instead of shape
+    plt.imshow((abs((data[data.shape[0]/2,:,:]))), cmap='jet', interpolation='none', extent=[ -dq1*g.shape[-1]/2, dq1*g.shape[-1]/2, -dq1*g.shape[-1]/2, dq1*g.shape[-1]/2])
     plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_2$ $ (\AA ^{-1}$)') 
     plt.colorbar()
     # OBS FIRST AXIS IS Y
     plt.subplot(222)
     #plt.title('-axis')
-    plt.imshow(abs(data[:,data.shape[1]/2,2:60]), cmap='jet', interpolation='none')#, extent=[  -dq1*shape/2, dq1*shape/2, -dq3*nbr_rot/2+q_abs, dq3*nbr_rot/2+q_abs]) 
+    plt.imshow(abs(data[:,data.shape[1]/2,:]), cmap='jet', interpolation='none')#, extent=[  -dq1*shape/2, dq1*shape/2, -dq3*nbr_rot/2+q_abs, dq3*nbr_rot/2+q_abs]) 
     plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_3$ $ (\AA ^{-1}$)') 
     plt.colorbar()
@@ -290,8 +294,7 @@ plot3d_singleBraggpeak(diff_data[max_pos_naive])
 # test trying to skew the system (the diff data) from the measurement coordinate system (in reciprocal space) to the orthogonal reciprocal space
 # with the help of the ptypy class coordinate_shift in geometry_class.py 
 
-# one geometry connected to each POD but it this case it is the same for each pod.
-g = P.pods.values()[0].geometry
+
 # real space psize: ( Rocking curve step (in degrees) and pixel sizes (in meters))
 g.psize 
 # resolution: "3D sample pixel size (in meters)." "doc: Refers to the conjugate (natural) coordinate system as (r3, r1, r2)"
