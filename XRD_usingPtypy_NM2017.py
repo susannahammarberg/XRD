@@ -239,50 +239,6 @@ def plot_bright_field():
     plt.ylabel('y [$\mu m$]')
 plot_bright_field()
 
-
-
-##################################################
-#plot line scan of bright field images (for realigning)
-# Dont use this because i realized it is better to use the Pil COM as 
-# reference than Merlin. (And also I use Center of mass and not a gaussian fit)
-#from scipy.optimize import curve_fit
-#from scipy import asarray as ar,exp
-## gaussian fitting to line plots
-#interval = 2
-## defines the horizontal roi for the STXM maps
-## first column in scan nbr, 2:nd is start of FWHM, 3rd is end of FWHM
-#horizontall_roi = np.zeros((len(scans),3))
-#horizontall_roi[:,0] = np.array(scans_sorted_theta)[:,1]
-#for ii in range(0,len(scans),interval):
-#    y = np.sum(brightfield[ii],1)
-#    x = np.arange(len(y))
-#    
-#    mean = np.sum(x*y)/ sum(y)
-#    sigma = np.sqrt( sum( y*(x-mean)**2) / sum(y))
-#    def gauss(x, a, x0, sigma):
-#        return a * np.exp(-(x - x0)**2 / (2 * sigma**2 ))
-#                          
-#    popt, pcov = curve_fit( gauss, x,y, p0 =[1, mean, sigma])
-#    halfMax = 0.5*popt[0] 
-#    fwhm = 2.3548200*popt[2]
-#    new_gauss = gauss(x, popt[0],popt[1],popt[2])
-#
-#    #find x-points of FWHM
-#    low  = np.where(new_gauss > halfMax)[0][0]     # replace bisect_left
-#    high = np.where(new_gauss >= halfMax)[0][-1] # replace bisect_right #tha last value that is higher the half max
-#    #save the x-point in a array 
-#    horizontall_roi[ii,1] = low
-#    horizontall_roi[ii,2] = high
-#    plt.figure()
-#    plt.plot( y, label='line cut')
-#    plt.plot( x, gauss(x,*popt),'r:', label='Gaussian fit')
-#    plt.plot(x,[halfMax]*len(x))
-#    plt.plot(low,halfMax,'yo')
-#    plt.plot(high,halfMax,'yo')
-#    plt.legend()
-#    plt.title('Line plots of BF maps with Gauss fits')
-################################################## 
-
 # help function. Makes fast-check-plotting easier. 
 def imshow(data):
     plt.figure()
