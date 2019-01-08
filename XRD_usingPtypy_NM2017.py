@@ -39,21 +39,21 @@ p.scans.scan01.name = 'Bragg3dModel'
 p.scans.scan01.data= u.Param()
 p.scans.scan01.data.name = 'NanomaxBraggJune2017'
 #base= 'D:/exp20170628_Wallentin_nanomax/exp20170628_Wallentin/'
-p.scans.scan01.data.datapath = 'D:/exp20170628_Wallentin_nanomax/exp20170628_Wallentin/%s/' % sample
+p.scans.scan01.data.datapath = 'F:/exp20170628_Wallentin_nanomax/exp20170628_Wallentin/%s/' % sample
 p.scans.scan01.data.datafile = '%s.h5' % sample
 p.scans.scan01.data.detfilepattern = 'scan_%04d_merlin_%04d.hdf5'
 # not sure if this loads properly
 p.scans.scan01.data.maskfile = 'C:/Users/Sanna/Documents/Beamtime/NanoMAX062017/merlin_mask.h5'
 p.scans.scan01.data.scans = scans
-p.scans.scan01.data.center = None
+#p.scans.scan01.data.center = (155,191)#None     #can also uses =None
 p.scans.scan01.data.theta_bragg = 12.0
-p.scans.scan01.data.shape = 150#512#150#60#290#128
+#p.scans.scan01.data.shape = 256#150#512#150#60#290#128
 # ptypy says: Setting center for ROI from None to [ 75.60081158  86.26238307].   bu that must be in the images that iI cut out from the detector
 #p.scans.scan01.data.center = (200,270) #(512-170,245)     #(512-170,245) for 192_   #Seems like its y than x
 #p.scans.scan01.data.load_parallel = 'all'
 p.scans.scan01.data.psize = 55e-6
 p.scans.scan01.data.energy = 9.49
-p.scans.scan01.data.distance = 1
+p.scans.scan01.data.distance = 0.7   #or 1?
 
 # This shifts the entire scan (projection) in real space, in units of steps 
 ##############################################################################
@@ -75,14 +75,15 @@ p.scans.scan01.data.distance = 1
             # referens ska vara 0, alla andra -
             #open this file
 # when it says horizontal i have used vertical because i am an ii
-# I will just have fo change the names everywhere             
-p.scans.scan01.data.horizontal_shift = list(np.load('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\ptycho_192_222\\horizontal_shift_vector.npy'))
+# I will just have fo change the names everyw here             
+#p.scans.scan01.data.horizontal_shift = list(np.load('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\ptycho_192_222\\horizontal_shift_vector.npy'))
 #vertical_shift_vector
-p.scans.scan01.data.vertical_shift = list(np.load('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\ptycho_192_222\\vertical_shift_vector.npy'))
+#p.scans.scan01.data.vertical_shift = list(np.load('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\ptycho_192_222\\vertical_shift_vector.npy'))
             
-#p.scans.scan01.data.vertical_shift = [ 0, 0, 1, 2, 2, 2, 3, 3, 3, 1, 0, 0, 0, 0, 0, -2, -2, -2, -3, -3, -2, -2,  -3, -2, -3, -3,  -4]
-#p.scans.scan01.data.horizontal_shift = [ -8, -8, -8, -8, -8, -3, -2, -4, 0, -5, -3, -6, -3, -6, -3, -5, -5, -7, -4,  -7, -3, -6, -2, -7, -2, -6, -3 ] 
-p.scans.scan01.data.detector_roi_indices = [275,425,150,300]  # this one should not be needed since u have shape and center...
+###p.scans.scan01.data.vertical_shift = [ 0, 0, 1, 2, 2, 2, 3, 3, 3, 1, 0, 0, 0, 0, 0, -2, -2, -2, -3, -3, -2, -2,  -3, -2, -3, -3,  -4]
+###p.scans.scan01.data.horizontal_shift = [ -8, -8, -8, -8, -8, -3, -2, -4, 0, -5, -3, -6, -3, -6, -3, -5, -5, -7, -4,  -7, -3, -6, -2, -7, -2, -6, -3 ] 
+#
+#p.scans.scan01.data.detector_roi_indices = [275,425,150,300]  # this one should not be needed since u have shape and center...
 
 p.scans.scan01.illumination = u.Param()
 p.scans.scan01.illumination.aperture = u.Param() 
@@ -119,13 +120,15 @@ from movie_maker import movie_maker
 import h5py
 
 # gather motorpositions from first rotation in scan list for plotting
-scan_name_int = scans[3]
+scan_name_int = scans[2]
 scan_name_string = '%d' %scan_name_int 
 metadata_directory = p.scans.scan01.data.datapath + sample + '.h5'
 metadata = h5py.File( metadata_directory ,'r')
 motorpositions_directory = '/entry%s' %scan_name_string  
 
-# get the list of scans order after the gonphi
+# gonphi is the rotation of the rotatation stage on which all motors samx/y/z and samsx/y/z and sample rests on.
+# when gonphi is orthoganoal to the incoming beam, it is equal to 180. Therfore, 
+# get the list of scans numbers and theta (read from gonphi)
 def sort_scans_after_theta():
     gonphi_list = []
     # read in all gonphi postins
@@ -144,14 +147,18 @@ def sort_scans_after_theta():
     zipped = zip(theta_array,scans)
     # then sort after the first col
     zipped.sort()
-    #scans_gonphi = [x for y, x in zipped]
+    # Now, because gonphi is gonphi = 180 - theta, and the data is sorted with higher gonphi,
+    # for this list to correspond to how the data is sorted in diffdata, this list should be reversed
+    zipped = np.flipud(scans_sorted_theta)
     return zipped
 scans_sorted_theta = sort_scans_after_theta()  
       
 # JW: Define your coordinate system! What are x,y,z, gonphi, and what are their directions
 # calculate mean value of dy
+# positive samy movement moves sample positive in y (which means the beam moves Down on the sample)
 motorpositiony = np.array(metadata.get(motorpositions_directory + '/measurement/samy'))
 dy = (motorpositiony[-1] - motorpositiony[0])*1./len(motorpositiony)
+
 # calculate mean value of dx
 # instead of samx, you find the motorposition in flysca ns from 'adlink_buff' # obs a row of zeros after values in adlinkAI_buff
 motorpositionx_AdLink = np.mean( np.array( metadata.get(motorpositions_directory + '/measurement/AdLinkAI_buff')), axis=0)
@@ -159,8 +166,8 @@ motorpositionx_AdLink = np.trim_zeros(motorpositionx_AdLink)
 dx = (motorpositionx_AdLink[-1] - motorpositionx_AdLink[0])*1./ len(motorpositionx_AdLink)
 
 # calc number of rows and cols that is used from measuremtn after realigning postions
-nbr_rows = len(motorpositiony) -(np.max(p.scans.scan01.data.vertical_shift) - np.min(p.scans.scan01.data.vertical_shift))                        
-nbr_cols = len(motorpositionx_AdLink)-(np.max(p.scans.scan01.data.horizontal_shift) - np.min(p.scans.scan01.data.horizontal_shift))
+nbr_rows = len(motorpositiony)# -(np.max(p.scans.scan01.data.vertical_shift) - np.min(p.scans.scan01.data.vertical_shift))                        
+nbr_cols = len(motorpositionx_AdLink)#-(np.max(p.scans.scan01.data.horizontal_shift) - np.min(p.scans.scan01.data.horizontal_shift))
 
 
 extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
@@ -168,6 +175,7 @@ extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
 #probe = P.probe.storages.values()[0].data[0]#remember, last index [0] is just for probe  
 #obj = P.obj.storages.values()[0].data
 # save masked diffraction patterns
+# in diff data the rotations are sorted according to gonphi, starting with the LOWEST GONPHI which is the reversed of theta. Hence, diff_data[0] is is theta=12.16 and scan=222 
 diff_data = P.diff.storages.values()[0].data*(P.mask.storages.values()[0].data[0])#        (storage_data[:,scan_COM,:,:])
 
 # save shape paramter to make code readable
@@ -180,6 +188,15 @@ plt.imshow(np.log10(sum(sum(diff_data))),cmap='jet', interpolation='none')
 plt.title('Summed intensity InP NW (log)')
 #plt.savefig("summed_intensity") 
 #movie_maker(np.log10(abs(probe)))
+# plot the sum of all position for one rotations
+plot_rotation = 13
+plt.figure()
+plt.imshow(sum(((diff_data[0:,plot_rotation]))),cmap='jet', interpolation='none')
+plt.title('Summed intensity for all rotations for scan %d InP NW (log)'%scans_sorted_theta[plot_rotation][1])
+
+plt.figure()
+plt.imshow((((diff_data[52,plot_rotation]))),cmap='jet', interpolation='none')
+
 
 def bright_field(data,x,y):
     index = 0
@@ -270,35 +287,44 @@ plot_bright_field()
 
 ##################################################
     
-    
+
 # help function. Makes fast-check-plotting easier. 
 def imshow(data):
     plt.figure()
     plt.imshow(data, cmap='jet')
     plt.colorbar()
-
+    
+    
 # define q1 q2 q3 and make them global.
 #TODO  Read in from P
 def def_q_vectors():
     global dq1, dq2, dq3, q_abs
+    
     dq1=0.00027036386641665936    #1/angstrom    dq1=dq2   dthete=0.02 (checked gonphi) (see calculate smapling conditions script)
     # lattice constant Ga(0.51In(0.49)P
     #lattice_constant_a = 5.653E-10 
     #d = lattice_constant_a / np.sqrt(3)
     #q_abs = 2*np.pi / d
     
-    energy = 9.49#8.800#9.5   #10.72   #keV    
-    wavelength =  1.23984E-9 / energy     #1.2781875567010311e-10
+    energy = 9.49              #keV    
+    wavelength =  1.23984E-9 / energy   
     theta = 11 # degrees
+    dtheta = 0.02
+    pixel_det = 55E-6
+    z_dist = 0.7
     
     # AB calculations dq3= np.deg2rad(self.psize[0]) * 4 * np.pi / self.lam * self.sintheta 
-    q_abs = 4 * np.pi / wavelength* np.sin(theta*np.pi/180)     *1E-10
+    q_abs = 4 * np.pi / wavelength * np.sin(theta*np.pi/180.)     *1E-10
     
-    dq3= np.deg2rad(0.02) * q_abs
+        # define pixel sizes in reciprocal space
+    dq1 = 2*np.pi*pixel_det /(wavelength * z_dist)
+    dq2 = 2*np.pi*pixel_det /(wavelength * z_dist)
+    dq3= np.deg2rad(dtheta) * q_abs
+    
     global q3, q1, q2
     
-    q3 = np.linspace(-dq3*len(scans)/2.+q_abs, dq3*len(scans)/2+q_abs, len(scans))    
-    q1 = np.linspace(-dq1*shape/2, dq1*shape/2, shape)
+    q3 = np.linspace(-dq3*len(scans)/2.+q_abs, dq3*len(scans)/2.+q_abs, len(scans))    
+    q1 = np.linspace(-dq1*shape/2., dq1*shape/2., shape)
     q2 = np.copy(q1)
 def_q_vectors()
     
@@ -307,27 +333,31 @@ def_q_vectors()
 # plots the 'naive' Bragg peak (not skewed coordinates) in a single position in 3dim   
 def plot3d_singleBraggpeak(data):    
     plt.figure()
-    plt.suptitle('Single position Bragg peak')
+    plt.suptitle('Naive plot of single position Bragg peak (Berenguer terminology)')
     plt.subplot(221)
-    plt.imshow((abs((data[data.shape[0]/2.,:,:]))), cmap='jet', interpolation='none', extent=[ -dq1*shape/2, dq1*shape/2, -dq1*shape/2, dq1*shape/2]) 
+    plt.imshow((abs((data[data.shape[0]/2,:,2:60]))), cmap='jet', interpolation='none')#, extent=[ -dq1*shape/2, dq1*shape/2, -dq1*shape/2, dq1*shape/2]) 
     plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_2$ $ (\AA ^{-1}$)') 
     plt.colorbar()
     # OBS FIRST AXIS IS Y
     plt.subplot(222)
     #plt.title('-axis')
-    plt.imshow(abs(data[:,data.shape[1]/2.,:]), cmap='jet', interpolation='none', extent=[  -dq1*shape/2, dq1*shape/2, -dq3*nbr_rot/2+q_abs, dq3*nbr_rot/2+q_abs]) 
+    plt.imshow(abs(data[:,data.shape[1]/2,2:60]), cmap='jet', interpolation='none')#, extent=[  -dq1*shape/2, dq1*shape/2, -dq3*nbr_rot/2+q_abs, dq3*nbr_rot/2+q_abs]) 
     plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_3$ $ (\AA ^{-1}$)') 
     plt.colorbar()
     plt.subplot(223)
     #plt.title('-axis')
-    plt.imshow((abs(data[:,:,shape/2.])), cmap='jet', interpolation='none', extent=[ -dq1*shape/2, dq1*shape/2,-dq3*nbr_rot/2+q_abs, dq3*nbr_rot/2+q_abs]) 
+    plt.imshow((abs(data[:,:,shape/2])), cmap='jet', interpolation='none')#, extent=[ -dq1*shape/2, dq1*shape/2,-dq3*nbr_rot/2+q_abs, dq3*nbr_rot/2+q_abs]) 
     plt.xlabel('$q_2$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_3$ $ (\AA ^{-1}$)') 
     plt.colorbar()
     
-plot3d_singleBraggpeak(diff_data[len(diff_data)/2])
+# check which positions has the most intensity, for a nice 3d Bragg peak plot
+pos_vect_naive = np.sum(np.sum(np.sum(diff_data, axis =1), axis =1), axis =1)
+max_pos_naive = np.argmax(pos_vect_naive)
+# plot the 'naive' 3d peak of the most diffracting position 
+plot3d_singleBraggpeak(diff_data[max_pos_naive])
 
 ##############################################################################
 # test trying to skew the system (the diff data) from the measurement coordinate system (in reciprocal space) to the orthogonal reciprocal space
@@ -335,6 +365,14 @@ plot3d_singleBraggpeak(diff_data[len(diff_data)/2])
 
 # one geometry connected to each POD but it this case it is the same for each pod.
 g = P.pods.values()[0].geometry
+# real space psize: ( Rocking curve step (in degrees) and pixel sizes (in meters))
+g.psize 
+# resolution: "3D sample pixel size (in meters)." "doc: Refers to the conjugate (natural) coordinate system as (r3, r1, r2)"
+#g.resolution
+
+# here I put the masked data in the data.
+#3 Here I do that for all frames
+# So this I need to keep
 P.diff.storages.values()[0].data = P.diff.storages.values()[0].data * P.mask.storages.values()[0].data
 # Choose postion:
 position = len(diff_data)/2
@@ -343,9 +381,23 @@ test_shift_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.dif
                          layer=position)
 
 
+##############################################################################
+plt.figure()
+plt.imshow(np.log10(sum(test_shift_coord.data[0])))
+plt.title('Check it there are hot pixels in here')
+plt.colorbar()
+#########################################################
+
+
+
 plot3d_singleBraggpeak(np.log10(test_shift_coord.data[0])) 
 
 # also transform the reciprocal vectors 
+
+# TODO this is not right
+# in the transformation is should be (q3,q1,q2)
+g._r3r1r2(pos)
+
 tup = q1, q2, q3
 q1_orth, q2_orth, q3_orth = ptypy.core.geometry_bragg.Geo_Bragg.transformed_grid(g, tup, input_space='reciprocal',input_system='natural')
 #compare natural and unscewed coordinate systems:
@@ -408,6 +460,7 @@ def XRD_analysis():
             data_orth_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.diff.storages.values()[0], input_space='reciprocal',
                          input_system='natural', keep_dims=True,
                          layer=position_idx)         # layer is the first col in P.diff.storages.values()[0]
+            
             
             # do the 3d COM analysis to find the orthogonal reciprocal space coordinates of each Bragg peak
             #TODO what units comes out of this function?
@@ -508,8 +561,8 @@ def plot_XRD_polar():
     plt.subplot(412)   
     #calculate lattice constant a from |q|:                             
     a_lattice_exp = np.pi*2./ XRD_absq *np.sqrt(3)
-    imshow(a_lattice_exp)
-    plt.title('Lattice conastant a [$\AA$]')
+    #imshow(a_lattice_exp)
+    #plt.title('Lattice conastant a [$\AA$]')
     mean_strain = np.nanmean(XRD_mask[:,start_cutXat:cutXat]*a_lattice_exp[:,start_cutXat:cutXat])
     #TODO try with reference strain equal to the center of the largest segment (for InP) # tody try with reference from the other NWs
     #mean_strain = a_lattice_exp[:,start_cutXat:cutXat].max() 
@@ -596,8 +649,10 @@ rocking_curve_plot()
 from mayavi import mlab   #if you can do this instde function it is ood because it changes to QT fram    
 
 # check which positions has the most intensity, for a nice 3d Bragg peak plot
+#TODO this is for the 'naive' system (diff_data is)
 pos_vect = np.sum(np.sum(np.sum(diff_data, axis =1), axis =1), axis =1)
 max_pos = np.argmax(pos_vect)
+
 plt.figure()
 plt.text(5, np.max(pos_vect), 'Max at: ' + str(max_pos), fontdict=None, withdash=False)
 plt.plot(pos_vect)
@@ -649,7 +704,7 @@ obj = mlab.contour3d( plot_data, contours=10, opacity=0.5, transparent=False, ex
 mlab.axes(ranges=[xmin, xmax, ymin, ymax, zmin, zmax])
 mlab.xlabel('$Q_z$ [$\AA^{-1}$]'); mlab.ylabel('$Q_y$ [$\AA^{-1}$]'); mlab.zlabel('$Q_z$ [$\AA^{-1}$]')
 #C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\scan461_\bragg_peak_stacking\InP\
-mlab.savefig('pos_'+ str(pos) +'.jpg')
+#mlab.savefig('pos_'+ str(pos) +'.jpg')
 
 
 # Another way to maka an iso surface. Can also be combined with cut planes
@@ -665,7 +720,7 @@ iso_pipeline_plot()
 ###############################################################################
 
 # calls a movie maker function in another script
-#movie_maker(abs((diff_data[:,13])),'all_poitions_S192') 
+movie_maker(abs((diff_data[:,13])),'all_poitions_S192') 
 
 # alternative movie maker. 
 def movie_maker2(data, name, rotation_nbr, nbr_plots):
@@ -683,7 +738,7 @@ def movie_maker2(data, name, rotation_nbr, nbr_plots):
     #        im = plt.title('Col %d'%i)    # does not work for movies
     #        txt = plt.text(0.2,0.8,i)   # (x,y,string)
                 ims.append([im])    #ims.append([im, txt])
-        ani = animation.ArtistAnimation(fig, ims, interval=500, blit=True,repeat_delay=0)  
+        ani = animation.ArtistAnimation(fig, ims, interval=2000, blit=True,repeat_delay=0)  
         #txt = plt.text(0.1,0.8,'row: ' + str(y) + ' col: ' + str(x) )  # (x,y,string)
         ims.append([im])
         #ims.append([[im],txt])
@@ -718,3 +773,6 @@ def movie_maker2(data, name, rotation_nbr, nbr_plots):
         #ani.save(name +'.mp4', writer="mencoder")    
 movie_maker2(diff_data,'all_diff_data_S192',rotation_nbr=13, nbr_plots=1)
 # TODO read out scan number from scans_sorted_theta
+
+plt.figure()
+plt.imshow(np.log10(diff_data[147][13]), cmap = 'jet', interpolation = 'none')#, origin='lower')

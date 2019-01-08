@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+"""
+XRD as a separate function
+"""
+
 
 
 print 'test3'
@@ -95,7 +99,11 @@ def XRD_fun(P, scans, shape):
   # one geometry connected to each POD but it this case it is the same for each pod.
   g = P.pods.values()[0].geometry
 
- 
+  # here I put the masked data in the data. 
+  #3 Here I do that for all frames  
+  # So this I need to keep
+  P.diff.storages.values()[0].data = P.diff.storages.values()[0].data * P.mask.storages.values()[0].data
+                 
   # also transform the reciprocal vectors   
   tup = q1, q2, q3
   q1_orth, q2_orth, q3_orth = ptypy.core.geometry_bragg.Geo_Bragg.transformed_grid(g, tup, input_space='reciprocal',input_system='natural')
