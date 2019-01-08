@@ -281,10 +281,7 @@ plot_bright_field()
 #    plt.plot(high,halfMax,'yo')
 #    plt.legend()
 #    plt.title('Line plots of BF maps with Gauss fits')
-
-
-##################################################
-    
+################################################## 
 
 # help function. Makes fast-check-plotting easier. 
 def imshow(data):
@@ -292,30 +289,12 @@ def imshow(data):
     plt.imshow(data, cmap='jet')
     plt.colorbar()
     
-    
-# define q1 q2 q3 and make them global.
-#TODO  Read in from P
+# define q1 q2 q3, are they + q_Abs in the geometry function? 
 def def_q_vectors():
     global dq1, dq2, dq3, q_abs
-    
-    dq1=0.00027036386641665936    #1/angstrom    dq1=dq2   dthete=0.02 (checked gonphi) (see calculate smapling conditions script)
-    # lattice constant Ga(0.51In(0.49)P
-    #lattice_constant_a = 5.653E-10 
-    #d = lattice_constant_a / np.sqrt(3)
-    #q_abs = 2*np.pi / d
-    
-        
-    # AB calculations dq3= np.deg2rad(self.psize[0]) * 4 * np.pi / self.lam * self.sintheta 
-    q_abs = 4 * np.pi / g.lam * g.sintheta     *1E-10
-    
-        # define pixel sizes in reciprocal space
-    dq1 = 2*np.pi*g.psize[1] /(g.lam * g.distance)
-    dq2 = 2*np.pi*g.psize[2] /(g.lam * g.distance)
-    dq3= np.deg2rad(g.psize[0]) * q_abs     #g.psize[1] = dtheta
-    
     global q3, q1, q2
     
-    q3 = np.linspace(-dq3*len(scans)/2.+q_abs, dq3*len(scans)/2.+q_abs, len(scans))    
+    q3 = np.linspace(-dq3*g.shape[0]/2.+q_abs, dq3*g.shape[0]/2.+q_abs, g.shape[0])    
     q1 = np.linspace(-dq1*g.shape[-1]/2., dq1*g.shape[-1]/2., g.shape[-1])
     q2 = np.copy(q1)
 def_q_vectors()
@@ -340,7 +319,7 @@ def plot3d_singleBraggpeak(data):
     plt.colorbar()
     plt.subplot(223)
     #plt.title('-axis')
-    plt.imshow((abs(data[:,:,shape/2])), cmap='jet', interpolation='none')#, extent=[ -dq1*shape/2, dq1*shape/2,-dq3*nbr_rot/2+q_abs, dq3*nbr_rot/2+q_abs]) 
+    plt.imshow((abs(data[:,:,data.shape[2]/2])), cmap='jet', interpolation='none')#, extent=[ -dq1*shape/2, dq1*shape/2,-dq3*nbr_rot/2+q_abs, dq3*nbr_rot/2+q_abs]) 
     plt.xlabel('$q_2$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_3$ $ (\AA ^{-1}$)') 
     plt.colorbar()
