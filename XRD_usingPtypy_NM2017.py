@@ -178,8 +178,6 @@ extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
 # in diff data the rotations are sorted according to gonphi, starting with the LOWEST GONPHI which is the reversed of theta. Hence, diff_data[0] is is theta=12.16 and scan=222 
 diff_data = P.diff.storages.values()[0].data*(P.mask.storages.values()[0].data[0])#        (storage_data[:,scan_COM,:,:])
 
-# save shape paramter to make code readable
-shape = P.diff.storages.values()[0].data.shape
 nbr_rot = len(scans)
 
 # plot the sum of all used diffraction images
@@ -306,25 +304,19 @@ def def_q_vectors():
     #d = lattice_constant_a / np.sqrt(3)
     #q_abs = 2*np.pi / d
     
-    energy = 9.49              #keV    
-    wavelength =  1.23984E-9 / energy   
-    theta = 11 # degrees
-    dtheta = 0.02
-    pixel_det = 55E-6
-    z_dist = 0.7
-    
+        
     # AB calculations dq3= np.deg2rad(self.psize[0]) * 4 * np.pi / self.lam * self.sintheta 
-    q_abs = 4 * np.pi / wavelength * np.sin(theta*np.pi/180.)     *1E-10
+    q_abs = 4 * np.pi / g.lam * g.sintheta     *1E-10
     
         # define pixel sizes in reciprocal space
-    dq1 = 2*np.pi*pixel_det /(wavelength * z_dist)
-    dq2 = 2*np.pi*pixel_det /(wavelength * z_dist)
-    dq3= np.deg2rad(dtheta) * q_abs
+    dq1 = 2*np.pi*g.psize[1] /(g.lam * g.distance)
+    dq2 = 2*np.pi*g.psize[2] /(g.lam * g.distance)
+    dq3= np.deg2rad(g.psize[0]) * q_abs     #g.psize[1] = dtheta
     
     global q3, q1, q2
     
     q3 = np.linspace(-dq3*len(scans)/2.+q_abs, dq3*len(scans)/2.+q_abs, len(scans))    
-    q1 = np.linspace(-dq1*shape/2., dq1*shape/2., shape)
+    q1 = np.linspace(-dq1*g.shape[-1]/2., dq1*g.shape[-1]/2., g.shape[-1])
     q2 = np.copy(q1)
 def_q_vectors()
     
@@ -335,7 +327,7 @@ def plot3d_singleBraggpeak(data):
     plt.figure()
     plt.suptitle('Naive plot of single position Bragg peak (Berenguer terminology)')
     plt.subplot(221)
-    plt.imshow((abs((data[data.shape[0]/2,:,2:60]))), cmap='jet', interpolation='none')#, extent=[ -dq1*shape/2, dq1*shape/2, -dq1*shape/2, dq1*shape/2]) 
+    plt.imshow((abs((data[data.shape[0]/2,:,2:60]))), cmap='jet', interpolation='none')#, extent=[ -dq1*shape/2, dq1*shape/2, -dq1*shape/2, dq1*shape/2]) #use g.shape[-1] instead of shape
     plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_2$ $ (\AA ^{-1}$)') 
     plt.colorbar()
@@ -396,7 +388,7 @@ plot3d_singleBraggpeak(np.log10(test_shift_coord.data[0]))
 
 # TODO this is not right
 # in the transformation is should be (q3,q1,q2)
-g._r3r1r2(pos)
+g._r3r1r2(position)
 
 tup = q1, q2, q3
 q1_orth, q2_orth, q3_orth = ptypy.core.geometry_bragg.Geo_Bragg.transformed_grid(g, tup, input_space='reciprocal',input_system='natural')
