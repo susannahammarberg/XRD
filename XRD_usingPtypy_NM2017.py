@@ -184,7 +184,6 @@ g = P.pods.values()[0].geometry
 # g. psize real space psize: ( Rocking curve step (in degrees) and pixel sizes (in meters))
 # g.resolution: "3D sample pixel size (in meters)." "doc: Refers to the conjugate (natural) coordinate system as (r3, r1, r2)"
 
-
 # plot the sum of all used diffraction images
 plt.figure()
 plt.imshow(np.log10(sum(sum(diff_data))),cmap='jet', interpolation='none')
@@ -264,83 +263,88 @@ def_q_vectors()
     
 # JW: ? Can you use the terminology from Berenguer? r-system, q-system, etc
 # Plot single position 3d bragg peak in 2d cuts using Berenguer terminology
-# plots the 'naive' Bragg peak (not skewed coordinates) in a single position in 3dim   
-def plot3d_singleBraggpeak(data):    
-    # find where the peak is in the detector plane
-    q1max = np.argmax(np.sum(sum(data),axis=0))
-    q2max = np.argmax(np.sum(sum(data),axis=1))
-    factor = 1E-10  #if you want to plot in m or Angstroms, user 1 or 1E-10
-    
-    plt.figure()
-    plt.suptitle('Naive plot of single position Bragg peak (Berenguer terminology)')
-    plt.subplot(221)
-    plt.imshow(data[data.shape[0]/2,:,:], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q2[0]*factor, q2[-1]*factor])
-    plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
-    plt.ylabel('$q_2$ $ (\AA ^{-1}$)') 
-    plt.colorbar()
-    # OBS FIRST AXIS IS Y
-    plt.subplot(222)
-    #plt.title('-axis')
-    plt.imshow(data[:,q2max,:], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q3[0]*factor, q3[-1]*factor])
-    plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
-    plt.ylabel('$q_3$ $ (\AA ^{-1}$)') 
-    plt.colorbar()
-    plt.subplot(223)
-    #plt.title('-axis')
-    plt.imshow((data[:,:,q1max]), cmap='jet', interpolation='none', extent=[q2[0]*factor, q2[-1]*factor, q3[0]*factor, q3[-1]*factor])
-    plt.xlabel('$q_2$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
-    plt.ylabel('$q_3$ $ (\AA ^{-1}$)') 
-    plt.colorbar()
+# plots the 'naive' Bragg peak (not skewed coordinates) in a single position in 3dim. This not nessessary for xrdd calculation.
     
 # check which positions has the most intensity, for a nice 3d Bragg peak plot
 pos_vect_naive = np.sum(np.sum(np.sum(diff_data, axis =1), axis =1), axis =1)
 max_pos_naive = np.argmax(pos_vect_naive)
-# plot the 'naive' 3d peak of the most diffracting position 
-plot3d_singleBraggpeak(diff_data[max_pos_naive])
+
+# find where the peak is in the detector plane
+q1max = np.argmax(np.sum(sum(diff_data[max_pos_naive]),axis=0))
+q2max = np.argmax(np.sum(sum(diff_data[max_pos_naive]),axis=1))
+    
+# plot the 'naive' 3d peak of the most diffracting position, and centered on the peak for q1 and q2 
+factor = 1E-10  #if you want to plot in m or Angstroms, user 1 or 1E-10
+plt.figure()
+plt.suptitle('Naive plot of single position Bragg peak (Berenguer terminology) in natural ( measurement) coord system q3q1q2')
+plt.subplot(221)
+plt.imshow(diff_data[max_pos_naive][g.shape[0]/2,:,:], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q2[0]*factor, q2[-1]*factor])
+plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
+plt.ylabel('$q_2$ $ (\AA ^{-1}$)') 
+plt.colorbar()
+# OBS FIRST AXIS IS Y
+plt.subplot(222)
+plt.imshow(diff_data[max_pos_naive][:,q2max,:], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q3[0]*factor, q3[-1]*factor])
+plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
+plt.ylabel('$q_3$ $ (\AA ^{-1}$)'); plt.colorbar()
+plt.subplot(223)
+plt.imshow(diff_data[max_pos_naive][:,:,q1max], cmap='jet', interpolation='none', extent=[q2[0]*factor, q2[-1]*factor, q3[0]*factor, q3[-1]*factor])
+plt.xlabel('$q_2$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
+plt.ylabel('$q_3$ $ (\AA ^{-1}$)'); plt.colorbar()
 
 ##############################################################################
-# test trying to skew the system (the diff data) from the measurement coordinate system (in reciprocal space) to the orthogonal reciprocal space
-# with the help of the ptypy class coordinate_shift in geometry_class.py 
+# test trying to skew the system (the diff data) from the measurement coordinate system q3q1q2 (in reciprocal space)
+# to the orthogonal reciprocal space qxqzqy with the help of the ptypy class coordinate_shift in geometry_class.py 
+# (qxqzqy is what ptypy calls it, not Berenguer which has no name for it)
 
-# here I put the masked data in the data.
-#3 Here I do that for all frames
-# So this I need to keep
+#TODO make a copy of the data instead of putting into diff storage. but it must be a ptypy storage as input in coordinate_shift.
+# here I put the masked data in the data. for all frames. So this I need to keep before xrd analysis. (or make a new storage with masked data) 
 P.diff.storages.values()[0].data = P.diff.storages.values()[0].data * P.mask.storages.values()[0].data
-# Choose postion:
-position = len(diff_data)/2
+
 test_shift_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.diff.storages.values()[0], input_space='reciprocal',
                          input_system='natural', keep_dims=True,
-                         layer=position)
-
-
-##############################################################################
+                         layer=max_pos_naive)
+# check if the data look good and is masked
 plt.figure()
 plt.imshow(np.log10(sum(test_shift_coord.data[0])))
-plt.title('Check it there are hot pixels in here')
-plt.colorbar()
+plt.title('Check it there are hot pixels in here');  plt.colorbar()
 #########################################################
+# plot  the peak now shifted to the orthoganal space qxqzqy, in the same postion as the previous plot of the natural system
+# and centered on the peak for q1 and q2 
+factor = 1E-10  #if you want to plot in m or Angstroms, user 1 or 1E-10
+plt.figure()
+plt.suptitle('Single position Bragg peak in orthogonal system (Berenguer terminology) qxqzqy')
+plt.subplot(221)
+plt.imshow(test_shift_coord.data[0][g.shape[0]/2,:,:], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q2[0]*factor, q2[-1]*factor])
+plt.xlabel('$q_z$ $ (\AA ^{-1}$)')   
+plt.ylabel('$q_y$ $ (\AA ^{-1}$)');  plt.colorbar()
+plt.subplot(222)
+plt.imshow(test_shift_coord.data[0][:,q2max,:], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q3[0]*factor, q3[-1]*factor])
+plt.xlabel('$q_z$ $ (\AA ^{-1}$)')   
+plt.ylabel('$q_x$ $ (\AA ^{-1}$)'); plt.colorbar()
+plt.subplot(223)
+plt.imshow(test_shift_coord.data[0][:,:,q1max], cmap='jet', interpolation='none', extent=[q2[0]*factor, q2[-1]*factor, q3[0]*factor, q3[-1]*factor])
+plt.xlabel('$q_y$ $ (\AA ^{-1}$)') 
+plt.ylabel('$q_x$ $ (\AA ^{-1}$)'); plt.colorbar()
 
-
-
-plot3d_singleBraggpeak(np.log10(test_shift_coord.data[0])) 
 
 # also transform the reciprocal vectors 
 
-# TODO this is not right
+# TODO this is not right. its 
 # in the transformation is should be (q3,q1,q2)
-g._r3r1r2(position)
+g._r3r1r2(max_pos_naive)
 
 tup = q1, q2, q3
 q1_orth, q2_orth, q3_orth = ptypy.core.geometry_bragg.Geo_Bragg.transformed_grid(g, tup, input_space='reciprocal',input_system='natural')
 #compare natural and unscewed coordinate systems:
 plt.figure()
-plt.imshow(np.log10(np.sum(diff_data[position],axis=2)), cmap='jet', interpolation='none', extent=[ q1[0], q1[-1], q3[0], q3[-1] ])
+plt.imshow(np.log10(np.sum(diff_data[max_pos_naive],axis=2)), cmap='jet', interpolation='none', extent=[ q1[0]*factor, q1[-1]*factor, q3[0]*factor, q3[-1]*factor ])
 plt.title('natural')
 plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   
 plt.ylabel('$q_3$ $ (\AA ^{-1}$)')
 plt.colorbar()
 plt.figure()
-plt.imshow(np.log10(np.sum(test_shift_coord.data[0],axis=2)), cmap='jet', interpolation='none',  extent=[ q1_orth[0], q1_orth[-1], q3_orth[0], q3_orth[-1] ])
+plt.imshow(np.log10(np.sum(test_shift_coord.data[0],axis=2)), cmap='jet', interpolation='none',  extent=[ q1_orth[0]*factor, q1_orth[-1]*factor, q3_orth[0]*factor, q3_orth[-1]*factor ])
 plt.title('cartesian')
 plt.xlabel('$q_x$ $ (\AA ^{-1}$)')   #q1~~qx
 plt.ylabel('$q_z$ $ (\AA ^{-1}$)')     #q3~qz
