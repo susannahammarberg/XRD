@@ -251,35 +251,39 @@ def imshow(data):
 def def_q_vectors():
     global q3, q1, q2
     
-    # can i find q_abs in ther geometry? what is the unit!!?
-    q_abs = 4 * np.pi / g.lam * g.sintheta     *1E-10
+    # can i find q_abs in ther geometry? units of reciprocal meters [m-1]
+    q_abs = 4 * np.pi / (g.lam * g.sintheta )
     q3 = np.linspace(-g.dq3*g.shape[0]/2.+q_abs, g.dq3*g.shape[0]/2.+q_abs, g.shape[0])    
     q1 = np.linspace(-g.dq1*g.shape[-1]/2., g.dq1*g.shape[-1]/2., g.shape[-1])
     q2 = np.copy(q1)
 def_q_vectors()
     
 # JW: ? Can you use the terminology from Berenguer? r-system, q-system, etc
-# Plot single position 3d bragg peak in 2d cuts
+# Plot single position 3d bragg peak in 2d cuts using Berenguer terminology
 # plots the 'naive' Bragg peak (not skewed coordinates) in a single position in 3dim   
 def plot3d_singleBraggpeak(data):    
-    # find where the peak is in 
+    # find where the peak is in the detector plane
+    q1max = np.argmax(np.sum(sum(data),axis=0))
+    q2max = np.argmax(np.sum(sum(data),axis=1))
+    factor = 1E-10  #if you want to plot in m or Angstroms, user 1 or 1E-10
+    
     plt.figure()
     plt.suptitle('Naive plot of single position Bragg peak (Berenguer terminology)')
     plt.subplot(221)
-    plt.imshow((abs((data[data.shape[0]/2,:,:]))), cmap='jet', interpolation='none', extent=[ -dq1*g.shape[-1]/2, dq1*g.shape[-1]/2, -dq1*g.shape[-1]/2, dq1*g.shape[-1]/2])
+    plt.imshow(data[data.shape[0]/2,:,:], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q2[0]*factor, q2[-1]*factor])
     plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_2$ $ (\AA ^{-1}$)') 
     plt.colorbar()
     # OBS FIRST AXIS IS Y
     plt.subplot(222)
     #plt.title('-axis')
-    plt.imshow(abs(data[:,data.shape[1]/2,:]), cmap='jet', interpolation='none')#, extent=[  -dq1*shape/2, dq1*shape/2, -dq3*nbr_rot/2+q_abs, dq3*nbr_rot/2+q_abs]) 
+    plt.imshow(data[:,q2max,:], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q3[0]*factor, q3[-1]*factor])
     plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_3$ $ (\AA ^{-1}$)') 
     plt.colorbar()
     plt.subplot(223)
     #plt.title('-axis')
-    plt.imshow((abs(data[:,:,data.shape[2]/2])), cmap='jet', interpolation='none')#, extent=[ -dq1*shape/2, dq1*shape/2,-dq3*nbr_rot/2+q_abs, dq3*nbr_rot/2+q_abs]) 
+    plt.imshow((data[:,:,q1max]), cmap='jet', interpolation='none', extent=[q2[0]*factor, q2[-1]*factor, q3[0]*factor, q3[-1]*factor])
     plt.xlabel('$q_2$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
     plt.ylabel('$q_3$ $ (\AA ^{-1}$)') 
     plt.colorbar()
