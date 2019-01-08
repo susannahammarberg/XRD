@@ -181,6 +181,10 @@ diff_data = P.diff.storages.values()[0].data*(P.mask.storages.values()[0].data[0
 # load the geometry instance to acces the geometry parameters
 # one geometry connected to each POD but it this case it is the same for each pod (since its all from the same measurement, same setup. Everything is the same, psixe energy, distance etc)
 g = P.pods.values()[0].geometry
+# g. psize real space psize: ( Rocking curve step (in degrees) and pixel sizes (in meters))
+# g.resolution: "3D sample pixel size (in meters)." "doc: Refers to the conjugate (natural) coordinate system as (r3, r1, r2)"
+
+
 # plot the sum of all used diffraction images
 plt.figure()
 plt.imshow(np.log10(sum(sum(diff_data))),cmap='jet', interpolation='none')
@@ -249,10 +253,10 @@ def imshow(data):
 # define q1 q2 q3, are they + q_Abs in the geometry function? 
 
 def def_q_vectors():
-    global q3, q1, q2
+    global q3, q1, q2, q_abs
     
     # can i find q_abs in ther geometry? units of reciprocal meters [m-1]
-    q_abs = 4 * np.pi / (g.lam * g.sintheta )
+    q_abs = 4 * np.pi / g.lam * g.sintheta
     q3 = np.linspace(-g.dq3*g.shape[0]/2.+q_abs, g.dq3*g.shape[0]/2.+q_abs, g.shape[0])    
     q1 = np.linspace(-g.dq1*g.shape[-1]/2., g.dq1*g.shape[-1]/2., g.shape[-1])
     q2 = np.copy(q1)
@@ -297,12 +301,6 @@ plot3d_singleBraggpeak(diff_data[max_pos_naive])
 ##############################################################################
 # test trying to skew the system (the diff data) from the measurement coordinate system (in reciprocal space) to the orthogonal reciprocal space
 # with the help of the ptypy class coordinate_shift in geometry_class.py 
-
-
-# real space psize: ( Rocking curve step (in degrees) and pixel sizes (in meters))
-g.psize 
-# resolution: "3D sample pixel size (in meters)." "doc: Refers to the conjugate (natural) coordinate system as (r3, r1, r2)"
-#g.resolution
 
 # here I put the masked data in the data.
 #3 Here I do that for all frames
@@ -700,6 +698,7 @@ def movie_maker2(data, name, rotation_nbr, nbr_plots):
      #           txt = plt.text(0.1,0.8,'row: ' + str(y) + ' col: ' + str(x) )  # (x,y,string)
                 #ims.append([[im, im2],txt])
                 ims.append([im, im2])           
+                
         ani = animation.ArtistAnimation(fig, ims, interval=500, blit=True,repeat_delay=0)  
         plt.axis('on')
         plt.show()
