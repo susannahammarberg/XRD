@@ -7,6 +7,13 @@ Prosedure:
 * do bright field analysis
 * load the q-vectors from the geometry object and calculate absq
 * make a quantitaive plot of a 3d peak with the right axes and the terminology from Berenguer
+* make a test where you move the data from the measurement basis to the orthogonal basis
+
+Vill veta hur lång Q är i reciprocal space
+Want to do COM of the peaks postion in the q1 q2 q3 system (the measurement system)
+But programmingwise its hard to do COM on something in a non-orthoganal system 
+- that is why I want to convert the data to a orthogonal system. Think of it as scatteringpoint, where from the measurement
+you have data 27x256x256 data points (intensity values) and for wach data point you have 3 coordinate values. 
 
 # XRD analysis: use ptypy coordinate shifting systems to shift the data 
 
@@ -266,7 +273,7 @@ def imshow(data):
     plt.imshow(data, cmap='jet')
     plt.colorbar()
     
-# define q1 q2 q3, are they + q_Abs from the geometry function 
+# define q1 q2 q3 + q_Abs from the geometry function 
 def def_q_vectors():
     global q3, q1, q2, q_abs
     
@@ -346,15 +353,18 @@ plt.ylabel('$q_x$ $ (\AA ^{-1}$)'); plt.colorbar()
 # also transform the reciprocal vectors 
 
 # TODO this is not right. Not transforming a grid just 3 1-dim vectors
-# in the transformation is should be (q3,q1,q2)
+# in the transformation is should be input and output: (qx, qz, qy), or (q3, q1, q2).
 # make q-vectors into a tuple to transform to the orthogonal system
 #TODO this does not work it should be a 3-tuple of 3d arrays. I dont know why it worked before, accident?
+# Large Q means meshgrid, small means vector
+Q3,Q1,Q2 = np.meshgrid(q3, q1, q2)
+tup = Q3, Q1, Q2   
+Qx, Qz, Qy = g.transformed_grid(tup, input_space='reciprocal', input_system='natural')
+# NOTE Qy should not have changed but the other ones should. note 2, Q3 and Qx should be much larger (never negative).
 
-#TA BORT DETTA OCH GÅ FRAMÅT O SE VAD DU BEHÖVER HA ISTF FÖR DET HÄR RANDOM PLOTTANDET O TESTANDET. SEN KAN JAG VISA FÖR JW OM DET BLIR PROBLEM.
-
-
-tup = q3, q1, q2   # SU SKA HA ETT GRID, DET HÄR ÄR INGET GRID
-qx, qz, qy = g.transformed_grid(tup, input_space='reciprocal', input_system='natural')
+#TODO remove this but first check how wrong it was. write down the thing i did wrong.  innan var det :
+tup = q1, q2, q3   # SU SKA HA ETT GRID, DET HÄR ÄR INGET GRID
+q1_o, q2_o, q3_o = g.transformed_grid(tup, input_space='reciprocal', input_system='natural')
 
 #compare natural and unscewed coordinate systems:
 plt.figure()
@@ -381,22 +391,22 @@ plt.colorbar()
 # TODO: remove single photon count, if the COM is calculated for very small values like pixels with 1 photon counts, 
 #then the result will be missleading. Set a threshold that keeps the resulting pixel on a mean value, like if sum(sum(sum(diffPattern)))< threshold. sum(sum(sum()))==bkg_value
 # input is 4d matrix with [nbr_diffpatterns][nbr_rotations][nbr_pixels_x][nbr_pixels_y]
-def COM_voxels_reciproc(data, vect1, vect2, vect3):
+def COM_voxels_reciproc(data, Qx, Qz, Qy ):
 
     # meshgrids for center of mass calculations in reciprocal space
-    #TODO correct order?
+    #TODO order does not matter?
     #TODO
     #TODO
     #TODO
-    Qx,Qz,Qy = np.meshgrid(vect1,vect3,vect2)
+    
     
     COM_x = sum(sum(sum(data* Qx)))/sum(sum(sum(data)))
     COM_y = sum(sum(sum(data* Qy)))/sum(sum(sum(data)))
     COM_z = sum(sum(sum(data* Qz)))/sum(sum(sum(data)))
 
     print 'coordinates in reciprocal space:'
-    print COM_x, COM_y, COM_z
-    return COM_x, COM_y, COM_z
+    print COM_x, COM_z, COM_y
+    return COM_x, COM_z, COM_y
 
 
 # loop through all scanning postitions and move the 3D Bragg peak from the 
@@ -420,7 +430,7 @@ def XRD_analysis():
             
             # do the 3d COM analysis to find the orthogonal reciprocal space coordinates of each Bragg peak
             #TODO what units comes out of this function?
-            COM_x, COM_y, COM_z = COM_voxels_reciproc(data_orth_coord.data[0], q1_orth, q2_orth, q3_orth)
+            COM_x, COM_z, COM_y = COM_voxels_reciproc(data_orth_coord.data[0],Qx, Qz, Qy)
             print 'COM_x'
             # insert coordinate in reciprocal space maps 
             XRD_x[row,col] = COM_x
@@ -445,10 +455,10 @@ def test_coordShift():
     plt.ylabel('$q_3$ $ (\AA ^{-1}$)')
     plt.colorbar()
     plt.figure()
-    plt.imshow(np.log10(np.sum(data_orth_coord.data[0],axis=2)), cmap='jet', interpolation='none', extent=[[ q1_orth[0], q1_orth[-1], q3_orth[0], q3_orth[-1] ] ])
+    plt.imshow(np.log10(np.sum(data_orth_coord.data[0],axis=2)), cmap='jet', interpolation='none')
     plt.title('cartesian')
-    plt.xlabel('$q_x$ $ (\AA ^{-1}$)')   #q1~~qx
-    plt.ylabel('$q_z$ $ (\AA ^{-1}$)')     #q3~qz
+    plt.xlabel('$q_x$ $ (\AA ^{-1}$)')
+    plt.ylabel('$q_z$ $ (\AA ^{-1}$)')
     plt.colorbar()        
 #test_coordShift()
    
