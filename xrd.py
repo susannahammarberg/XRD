@@ -27,7 +27,6 @@ def XRD_fun(P, scans, shape):
   print 'starting xrd analysis'
   plt.figure(1)
   plt.imshow(sum(sum(diff_data)
-  plt.imshow()
 	
   def bright_field(data,x,y):
       import numpy as np

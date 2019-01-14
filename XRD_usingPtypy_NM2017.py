@@ -1,6 +1,16 @@
-# load data via ptypy
+"""
+ loads data via ptypy and perform xrd analysis from NanoMAX experiment
+
+Prosedure:
+* load the data into a ptypy storage by preparing a paramter three p (so i dont need to write my own script to put the data in a ptypy storage)
+* load the data from the ptycho object P = Ptycho(p,level=2)
+* do bright field analysis
+* load the q-vectors from the geometry object and calculate absq
+* make a quantitaive plot of a 3d peak with the right axes and the terminology from Berenguer
+
 # XRD analysis: use ptypy coordinate shifting systems to shift the data 
 
+"""
 import ptypy
 from ptypy.core import Ptycho
 from ptypy import utils as u
@@ -112,7 +122,10 @@ p.engines.engine00.probe_support = None
 
 # prepare and run
 P = Ptycho(p,level=2) #level 2 for XRD analysis
-#TODO how to read metadata from P (data sorted acc to gonphi)
+
+# ---------------------------------------------------------
+# Load data, some metadata, gemetry object, and do some initial plotting
+#-----------------------------------------------------------
 
 import sys   #to collect system path ( to collect function from another directory)
 sys.path.insert(0, 'C:/Users/Sanna/Documents/python_utilities') #can I collect all functions in this folder?
@@ -192,6 +205,7 @@ plt.title('Summed intensity InP NW (log)')
 #movie_maker(np.log10(abs(probe)))
 # plot the sum of all position for one rotations
 plot_rotation = 13
+
 plt.figure()
 plt.imshow(sum(((diff_data[0:,plot_rotation]))),cmap='jet', interpolation='none')
 plt.title('Summed intensity for all rotations for scan %d InP NW (log)'%scans_sorted_theta[plot_rotation][1])
@@ -199,6 +213,9 @@ plt.title('Summed intensity for all rotations for scan %d InP NW (log)'%scans_so
 plt.figure()
 plt.imshow((((diff_data[52,plot_rotation]))),cmap='jet', interpolation='none')
 
+# ---------------------------------------------------------
+# Do bright field analysis
+#-----------------------------------------------------------
 
 def bright_field(data,x,y):
     index = 0
@@ -249,12 +266,11 @@ def imshow(data):
     plt.imshow(data, cmap='jet')
     plt.colorbar()
     
-# define q1 q2 q3, are they + q_Abs in the geometry function? 
-
+# define q1 q2 q3, are they + q_Abs from the geometry function 
 def def_q_vectors():
     global q3, q1, q2, q_abs
     
-    # can i find q_abs in ther geometry? units of reciprocal meters [m-1]
+    #  units of reciprocal meters [m-1]
     q_abs = 4 * np.pi / g.lam * g.sintheta
     q3 = np.linspace(-g.dq3*g.shape[0]/2.+q_abs, g.dq3*g.shape[0]/2.+q_abs, g.shape[0])    
     q1 = np.linspace(-g.dq1*g.shape[-1]/2., g.dq1*g.shape[-1]/2., g.shape[-1])
@@ -327,15 +343,19 @@ plt.imshow(test_shift_coord.data[0][:,:,q1max], cmap='jet', interpolation='none'
 plt.xlabel('$q_y$ $ (\AA ^{-1}$)') 
 plt.ylabel('$q_x$ $ (\AA ^{-1}$)'); plt.colorbar()
 
-
 # also transform the reciprocal vectors 
 
-# TODO this is not right. its 
+# TODO this is not right. Not transforming a grid just 3 1-dim vectors
 # in the transformation is should be (q3,q1,q2)
-g._r3r1r2(max_pos_naive)
+# make q-vectors into a tuple to transform to the orthogonal system
+#TODO this does not work it should be a 3-tuple of 3d arrays. I dont know why it worked before, accident?
 
-tup = q1, q2, q3
-q1_orth, q2_orth, q3_orth = ptypy.core.geometry_bragg.Geo_Bragg.transformed_grid(g, tup, input_space='reciprocal',input_system='natural')
+#TA BORT DETTA OCH GÅ FRAMÅT O SE VAD DU BEHÖVER HA ISTF FÖR DET HÄR RANDOM PLOTTANDET O TESTANDET. SEN KAN JAG VISA FÖR JW OM DET BLIR PROBLEM.
+
+
+tup = q3, q1, q2   # SU SKA HA ETT GRID, DET HÄR ÄR INGET GRID
+qx, qz, qy = g.transformed_grid(tup, input_space='reciprocal', input_system='natural')
+
 #compare natural and unscewed coordinate systems:
 plt.figure()
 plt.imshow(np.log10(np.sum(diff_data[max_pos_naive],axis=2)), cmap='jet', interpolation='none', extent=[ q1[0]*factor, q1[-1]*factor, q3[0]*factor, q3[-1]*factor ])
@@ -431,8 +451,7 @@ def test_coordShift():
     plt.ylabel('$q_z$ $ (\AA ^{-1}$)')     #q3~qz
     plt.colorbar()        
 #test_coordShift()
-#plot3d_singleBraggpeak(np.log10(hhhh.data[0])) 
-    
+   
 
 def plot_XRD_xyz():
     # plot reciprocal space map x y z 
