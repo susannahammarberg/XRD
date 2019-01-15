@@ -7,13 +7,19 @@ Prosedure:
 * do bright field analysis
 * load the q-vectors from the geometry object and calculate absq
 * make a quantitaive plot of a 3d peak with the right axes and the terminology from Berenguer
-* make a test where you move the data from the measurement basis to the orthogonal basis
+* test1 where you move the data (intensity points in a 3d array) from the natural basis to the orthogonal basis and plot
+* Make a q-space meshgrid: first make a meshgrid from the three scattering vectors in the natural basis
+  and move that to the orthogonal basis with the ptypy function transformed_grid
+* Do XRD analysis:
+* For each position move the 3d scattering data from the natural to the orthogonal basis
+* Send the orthogonal basis data along with the orthogonal basis meshgrid to the COM analysis function
+* find the COM of the Bragg peak in the orthogonal system
+* TODO make some tests where you plot a 3d peak and print out the results from the COM
+* TODO check that x y z notation in COM analysis and whn putting it into XRD_x-..etc
+* put the 3 coordinate values into 3 separate 2d matrices (dim same as scanning grid)
+* plot COM_qx,COM_qy,COM_qz, calculate XRD_absq and 2 rotations. from XRD_absq,calculate strain and plot. mask and plot etc.
 
-Vill veta hur lång Q är i reciprocal space
-Want to do COM of the peaks postion in the q1 q2 q3 system (the measurement system)
-But programmingwise its hard to do COM on something in a non-orthoganal system 
-- that is why I want to convert the data to a orthogonal system. Think of it as scatteringpoint, where from the measurement
-you have data 27x256x256 data points (intensity values) and for wach data point you have 3 coordinate values. 
+Want to know the change of Q in reciprocal space, that is, the orthogoanl space reciprocal to real space.
 
 # XRD analysis: use ptypy coordinate shifting systems to shift the data 
 
@@ -33,9 +39,8 @@ from ptypy.experiment.nanomax3d import NanomaxBraggJune2017 # after update need 
 p = u.Param()
 p.run = 'XRD_JWX33'   # 'XRD_InP'
 
-sample = 'JWX33_NW2'; scans = range(192, 200+1)+range(205, 222+1)
-#sample = 'JWX29A_NW1' #; scans =[458,459]
-#scans = [458,459,460,461,462,463,464,465,466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
+#sample = 'JWX33_NW2'; scans = range(192, 200+1)+range(205, 222+1)
+sample = 'JWX29A_NW1'; scans = [458,459,460,461,462,463,464,465,466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
 
 p.data_type = "single"   #or "double"
 # for verbose output
@@ -357,14 +362,15 @@ plt.ylabel('$q_x$ $ (\AA ^{-1}$)'); plt.colorbar()
 # make q-vectors into a tuple to transform to the orthogonal system
 #TODO this does not work it should be a 3-tuple of 3d arrays. I dont know why it worked before, accident?
 # Large Q means meshgrid, small means vector
-Q3,Q1,Q2 = np.meshgrid(q3, q1, q2)
+
+Q3,Q1,Q2 = np.meshgrid(q1, q3, q2) # NOTE when you make a mesh grid the first two axes are interchanged!!!! why??? not sure if q1 and q2 are correct here
 tup = Q3, Q1, Q2   
 Qx, Qz, Qy = g.transformed_grid(tup, input_space='reciprocal', input_system='natural')
-# NOTE Qy should not have changed but the other ones should. note 2, Q3 and Qx should be much larger (never negative).
+# NOTE Q2-Qy should not have changed but the other ones should. note 2, Q3 and Qx should be much larger (never negative).
 
 #TODO remove this but first check how wrong it was. write down the thing i did wrong.  innan var det :
-tup = q1, q2, q3   # SU SKA HA ETT GRID, DET HÄR ÄR INGET GRID
-q1_o, q2_o, q3_o = g.transformed_grid(tup, input_space='reciprocal', input_system='natural')
+#tup = q1, q2, q3   # SU SKA HA ETT GRID, DET HÄR ÄR INGET GRID
+#q1_o, q2_o, q3_o = g.transformed_grid(tup, input_space='reciprocal', input_system='natural')
 
 #compare natural and unscewed coordinate systems:
 plt.figure()
@@ -401,8 +407,8 @@ def COM_voxels_reciproc(data, Qx, Qz, Qy ):
     
     
     COM_x = sum(sum(sum(data* Qx)))/sum(sum(sum(data)))
-    COM_y = sum(sum(sum(data* Qy)))/sum(sum(sum(data)))
     COM_z = sum(sum(sum(data* Qz)))/sum(sum(sum(data)))
+    COM_y = sum(sum(sum(data* Qy)))/sum(sum(sum(data)))
 
     print 'coordinates in reciprocal space:'
     print COM_x, COM_z, COM_y
