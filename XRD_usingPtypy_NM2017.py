@@ -69,7 +69,7 @@ p.scans.scan01.data.maskfile = 'C:/Users/Sanna/Documents/Beamtime/NanoMAX062017/
 p.scans.scan01.data.scans = scans
 #p.scans.scan01.data.center = (155,191)#None     #can also uses =None
 p.scans.scan01.data.theta_bragg = 12.0
-#p.scans.scan01.data.shape = 256#150#512#150#60#290#128
+p.scans.scan01.data.shape = 150#256#150#512#150#60#290#128
 # ptypy says: Setting center for ROI from None to [ 75.60081158  86.26238307].   bu that must be in the images that iI cut out from the detector
 #p.scans.scan01.data.center = (200,270) #(512-170,245)     #(512-170,245) for 192_   #Seems like its y than x
 #p.scans.scan01.data.load_parallel = 'all'
@@ -355,13 +355,12 @@ plt.imshow(test_shift_coord.data[0][:,:,q1max], cmap='jet', interpolation='none'
 plt.xlabel('$q_y$ $ (\AA ^{-1}$)') 
 plt.ylabel('$q_x$ $ (\AA ^{-1}$)'); plt.colorbar()
 
-# also transform the reciprocal vectors 
+# --------------------------------------------------------------
+# Make a meshgrid of q3 q1 q2 and transform it to qx qz qy
+#----------------------------------------------------------------
 
-# TODO this is not right. Not transforming a grid just 3 1-dim vectors
 # in the transformation is should be input and output: (qx, qz, qy), or (q3, q1, q2).
-# make q-vectors into a tuple to transform to the orthogonal system
-#TODO this does not work it should be a 3-tuple of 3d arrays. I dont know why it worked before, accident?
-# Large Q means meshgrid, small means vector
+# make q-vectors into a tuple to transform to the orthogonal system; Large Q means meshgrid, small means vector
 
 Q3,Q1,Q2 = np.meshgrid(q1, q3, q2) # NOTE when you make a mesh grid the first two axes are interchanged!!!! why??? not sure if q1 and q2 are correct here
 tup = Q3, Q1, Q2   
@@ -373,6 +372,7 @@ Qx, Qz, Qy = g.transformed_grid(tup, input_space='reciprocal', input_system='nat
 #q1_o, q2_o, q3_o = g.transformed_grid(tup, input_space='reciprocal', input_system='natural')
 
 #compare natural and unscewed coordinate systems:
+# TODO is this plotting correct?
 plt.figure()
 plt.imshow(np.log10(np.sum(diff_data[max_pos_naive],axis=2)), cmap='jet', interpolation='none', extent=[ q1[0]*factor, q1[-1]*factor, q3[0]*factor, q3[-1]*factor ])
 plt.title('natural')
@@ -380,10 +380,10 @@ plt.xlabel('$q_1$ $ (\AA ^{-1}$)')
 plt.ylabel('$q_3$ $ (\AA ^{-1}$)')
 plt.colorbar()
 plt.figure()
-plt.imshow(np.log10(np.sum(test_shift_coord.data[0],axis=2)), cmap='jet', interpolation='none',  extent=[ q1_orth[0]*factor, q1_orth[-1]*factor, q3_orth[0]*factor, q3_orth[-1]*factor ])
-plt.title('cartesian')
-plt.xlabel('$q_x$ $ (\AA ^{-1}$)')   #q1~~qx
-plt.ylabel('$q_z$ $ (\AA ^{-1}$)')     #q3~qz
+plt.imshow(np.log10(np.sum(test_shift_coord.data[0],axis=2)), cmap='jet', interpolation='none',  extent=[ qz[0]*factor, qz[-1]*factor, qx[0]*factor, qx[-1]*factor ])
+plt.title('orthogonal')
+plt.xlabel('$q_z$ $ (\AA ^{-1}$)')
+plt.ylabel('$q_x$ $ (\AA ^{-1}$)')
 plt.colorbar()
 # and 3d cuts
 #plot3d_singleBraggpeak(np.log10(data[position]))
@@ -423,7 +423,6 @@ def XRD_analysis():
     XRD_x = np.zeros((nbr_rows,nbr_cols))
     XRD_z = np.zeros((nbr_rows,nbr_cols))
     XRD_y = np.zeros((nbr_rows,nbr_cols))
-    print 'iiiii'
 
     for row in range(0,nbr_rows):
         for col in range(0,nbr_cols):
@@ -433,9 +432,7 @@ def XRD_analysis():
                          input_system='natural', keep_dims=True,
                          layer=position_idx)         # layer is the first col in P.diff.storages.values()[0]
             
-            
             # do the 3d COM analysis to find the orthogonal reciprocal space coordinates of each Bragg peak
-            #TODO what units comes out of this function?
             COM_x, COM_z, COM_y = COM_voxels_reciproc(data_orth_coord.data[0],Qx, Qz, Qy)
             print 'COM_x'
             # insert coordinate in reciprocal space maps 
