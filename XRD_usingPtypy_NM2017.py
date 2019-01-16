@@ -39,8 +39,8 @@ from ptypy.experiment.nanomax3d import NanomaxBraggJune2017 # after update need 
 p = u.Param()
 p.run = 'XRD_JWX33'   # 'XRD_InP'
 
-#sample = 'JWX33_NW2'; scans = range(192, 200+1)+range(205, 222+1)
-sample = 'JWX29A_NW1'; scans = [458,459,460,461,462,463,464,465,466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
+sample = 'JWX33_NW2'; scans = range(192, 200+1)+range(205, 222+1)
+#sample = 'JWX29A_NW1'; scans = [458,459,460,461,462,463,464,465,466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
 
 p.data_type = "single"   #or "double"
 # for verbose output
@@ -69,13 +69,14 @@ p.scans.scan01.data.maskfile = 'C:/Users/Sanna/Documents/Beamtime/NanoMAX062017/
 p.scans.scan01.data.scans = scans
 #p.scans.scan01.data.center = (155,191)#None     #can also uses =None
 p.scans.scan01.data.theta_bragg = 12.0
-p.scans.scan01.data.shape = 150#256#150#512#150#60#290#128
-# ptypy says: Setting center for ROI from None to [ 75.60081158  86.26238307].   bu that must be in the images that iI cut out from the detector
-#p.scans.scan01.data.center = (200,270) #(512-170,245)     #(512-170,245) for 192_   #Seems like its y than x
+p.scans.scan01.data.shape = 150#150#256#150#512#150#60#290#128 --THIS
+#p.scans.scan01.data.auto_center= False # dont do it..
+# ptypy says: Setting center for ROI from None to [ 75.60081158  86.26238307].   but that must be in the images that iI cut out from the detector
+p.scans.scan01.data.center = (342,245) # (200,270) #(512-170,245)     #(512-170,245) for 192_   #Seems like its y than x
 #p.scans.scan01.data.load_parallel = 'all'
 p.scans.scan01.data.psize = 55e-6
 p.scans.scan01.data.energy = 9.49
-p.scans.scan01.data.distance = 0.7   #or 1?
+p.scans.scan01.data.distance =  0.7   #or 1?
 
 # This shifts the entire scan (projection) in real space, in units of steps 
 ##############################################################################
@@ -96,15 +97,16 @@ p.scans.scan01.data.distance = 0.7   #or 1?
 #p.scans.scan01.data.horizontal_shift = [1] * len(scans) 
             # referens ska vara 0, alla andra -
             #open this file
-# when it says horizontal i have used vertical because i am an ii
+# when it says horizontal i have used vertical because i am an i
 # I will just have fo change the names everyw here             
 #p.scans.scan01.data.horizontal_shift = list(np.load('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\ptycho_192_222\\horizontal_shift_vector.npy'))
 #vertical_shift_vector
 #p.scans.scan01.data.vertical_shift = list(np.load('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\ptycho_192_222\\vertical_shift_vector.npy'))
-            
-###p.scans.scan01.data.vertical_shift = [ 0, 0, 1, 2, 2, 2, 3, 3, 3, 1, 0, 0, 0, 0, 0, -2, -2, -2, -3, -3, -2, -2,  -3, -2, -3, -3,  -4]
-###p.scans.scan01.data.horizontal_shift = [ -8, -8, -8, -8, -8, -3, -2, -4, 0, -5, -3, -6, -3, -6, -3, -5, -5, -7, -4,  -7, -3, -6, -2, -7, -2, -6, -3 ] 
-#
+
+# TODO is this what I should use, or the list in the prev. row?            
+#p.scans.scan01.data.vertical_shift = [ 0, 0, 1, 2, 2, 2, 3, 3, 3, 1, 0, 0, 0, 0, 0, -2, -2, -2, -3, -3, -2, -2,  -3, -2, -3, -3,  -4]
+#p.scans.scan01.data.horizontal_shift = [ -8, -8, -8, -8, -8, -3, -2, -4, 0, -5, -3, -6, -3, -6, -3, -5, -5, -7, -4,  -7, -3, -6, -2, -7, -2, -6, -3 ] 
+
 #p.scans.scan01.data.detector_roi_indices = [275,425,150,300]  # this one should not be needed since u have shape and center...
 
 p.scans.scan01.illumination = u.Param()
@@ -133,7 +135,7 @@ p.engines.engine00.probe_support = None
 # p.engines.engine00.sample_support.shrinkwrap.plot = True
 
 # prepare and run
-P = Ptycho(p,level=2) #level 2 for XRD analysis
+P = Ptycho(p,level=2)
 
 # ---------------------------------------------------------
 # Load data, some metadata, gemetry object, and do some initial plotting
@@ -191,8 +193,8 @@ motorpositionx_AdLink = np.trim_zeros(motorpositionx_AdLink)
 dx = (motorpositionx_AdLink[-1] - motorpositionx_AdLink[0])*1./ len(motorpositionx_AdLink)
 
 # calc number of rows and cols that is used from measuremtn after realigning postions
-nbr_rows = len(motorpositiony)# -(np.max(p.scans.scan01.data.vertical_shift) - np.min(p.scans.scan01.data.vertical_shift))                        
-nbr_cols = len(motorpositionx_AdLink)#-(np.max(p.scans.scan01.data.horizontal_shift) - np.min(p.scans.scan01.data.horizontal_shift))
+nbr_rows = len(motorpositiony) #-(np.max(p.scans.scan01.data.vertical_shift)# - np.min(p.scans.scan01.data.vertical_shift))                        
+nbr_cols = len(motorpositionx_AdLink)#-#(np.max(p.scans.scan01.data.horizontal_shift)# - np.min(p.scans.scan01.data.horizontal_shift))
 
 
 extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
@@ -201,7 +203,7 @@ extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
 #obj = P.obj.storages.values()[0].data
 # save masked diffraction patterns
 # in diff data the rotations are sorted according to gonphi, starting with the LOWEST GONPHI which is the reversed of theta. Hence, diff_data[0] is is theta=12.16 and scan=222 
-diff_data = P.diff.storages.values()[0].data*(P.mask.storages.values()[0].data[0])#        (storage_data[:,scan_COM,:,:])
+diff_data = P.diff.storages.values()[0].data*P.mask.storages.values()[0].data[0]#        (storage_data[:,scan_COM,:,:])
 
 # load the geometry instance to acces the geometry parameters
 # one geometry connected to each POD but it this case it is the same for each pod (since its all from the same measurement, same setup. Everything is the same, psixe energy, distance etc)
@@ -247,7 +249,7 @@ for jj in range(0,len(scans)):
 
 
 def plot_bright_field():
-    interval=1 #plotting interval
+    interval=10 #plotting interval
     #plot every something 2d bright fields
     for ii in range(0,len(scans),interval):
         plt.figure()
@@ -361,11 +363,12 @@ plt.ylabel('$q_x$ $ (\AA ^{-1}$)'); plt.colorbar()
 
 # in the transformation is should be input and output: (qx, qz, qy), or (q3, q1, q2).
 # make q-vectors into a tuple to transform to the orthogonal system; Large Q means meshgrid, small means vector
+Q1,Q3,Q2 = np.meshgrid(q1, q3, q2) # NOTE when you make a mesh grid the first two axes are interchanged!!!! why???
 
-Q3,Q1,Q2 = np.meshgrid(q1, q3, q2) # NOTE when you make a mesh grid the first two axes are interchanged!!!! why??? not sure if q1 and q2 are correct here
 tup = Q3, Q1, Q2   
 Qx, Qz, Qy = g.transformed_grid(tup, input_space='reciprocal', input_system='natural')
 # NOTE Q2-Qy should not have changed but the other ones should. note 2, Q3 and Qx should be much larger (never negative).
+#TODO so its wrong again, look at prev line
 
 #TODO remove this but first check how wrong it was. write down the thing i did wrong.  innan var det :
 #tup = q1, q2, q3   # SU SKA HA ETT GRID, DET HÄR ÄR INGET GRID
@@ -444,6 +447,9 @@ def XRD_analysis():
             
             # plot every other 3d peak and print out the postion of the COM analysis
             #if (position_idx%10=0):
+#            plt.figure()
+#            plt.imshow(sum(data_orth_coord.data[0]))
+#            print COM_x, COM_z, COM_y
     return XRD_x, XRD_z, XRD_y, data_orth_coord
 
 XRD_x, XRD_z, XRD_y, data_orth_coord = XRD_analysis()
