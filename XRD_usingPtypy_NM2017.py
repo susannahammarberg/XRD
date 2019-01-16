@@ -69,10 +69,14 @@ p.scans.scan01.data.maskfile = 'C:/Users/Sanna/Documents/Beamtime/NanoMAX062017/
 p.scans.scan01.data.scans = scans
 #p.scans.scan01.data.center = (155,191)#None     #can also uses =None
 p.scans.scan01.data.theta_bragg = 12.0
-p.scans.scan01.data.shape = 150#150#256#150#512#150#60#290#128 --THIS
+p.scans.scan01.data.shape = 256# 150#150#256#150#512#150#60#290#128 --THIS
 #p.scans.scan01.data.auto_center= False # dont do it..
 # ptypy says: Setting center for ROI from None to [ 75.60081158  86.26238307].   but that must be in the images that iI cut out from the detector
+
+
 p.scans.scan01.data.center = (342,245) # (200,270) #(512-170,245)     #(512-170,245) for 192_   #Seems like its y than x
+#calculates the center based on the first pic said Alex.  186.75310731  265.64597192] thats not wr
+
 #p.scans.scan01.data.load_parallel = 'all'
 p.scans.scan01.data.psize = 55e-6
 p.scans.scan01.data.energy = 9.49
@@ -360,7 +364,7 @@ plt.ylabel('$q_x$ $ (\AA ^{-1}$)'); plt.colorbar()
 # --------------------------------------------------------------
 # Make a meshgrid of q3 q1 q2 and transform it to qx qz qy
 #----------------------------------------------------------------
-
+#1 3 2 
 # in the transformation is should be input and output: (qx, qz, qy), or (q3, q1, q2).
 # make q-vectors into a tuple to transform to the orthogonal system; Large Q means meshgrid, small means vector
 Q1,Q3,Q2 = np.meshgrid(q1, q3, q2) # NOTE when you make a mesh grid the first two axes are interchanged!!!! why???
@@ -368,7 +372,9 @@ Q1,Q3,Q2 = np.meshgrid(q1, q3, q2) # NOTE when you make a mesh grid the first tw
 tup = Q3, Q1, Q2   
 Qx, Qz, Qy = g.transformed_grid(tup, input_space='reciprocal', input_system='natural')
 # NOTE Q2-Qy should not have changed but the other ones should. note 2, Q3 and Qx should be much larger (never negative).
-#TODO so its wrong again, look at prev line
+qx = np.linspace(Qx.min(),Qx.max(),g.shape[0])
+qz = np.linspace(Qz.min(),Qz.max(),g.shape[-1])
+qy = np.linspace(Qx.min(),Qx.max(),g.shape[-1])
 
 #TODO remove this but first check how wrong it was. write down the thing i did wrong.  innan var det :
 #tup = q1, q2, q3   # SU SKA HA ETT GRID, DET HÄR ÄR INGET GRID
@@ -400,18 +406,15 @@ plt.colorbar()
 # TODO: remove single photon count, if the COM is calculated for very small values like pixels with 1 photon counts, 
 #then the result will be missleading. Set a threshold that keeps the resulting pixel on a mean value, like if sum(sum(sum(diffPattern)))< threshold. sum(sum(sum()))==bkg_value
 # input is 4d matrix with [nbr_diffpatterns][nbr_rotations][nbr_pixels_x][nbr_pixels_y]
-def COM_voxels_reciproc(data, Qx, Qz, Qy ):
+def COM_voxels_reciproc(data, vect_Qx, vect_Qz, vect_Qy ):
 
     # meshgrids for center of mass calculations in reciprocal space
     #TODO order does not matter?
     #TODO
     #TODO
-    #TODO
-    
-    
-    COM_x = sum(sum(sum(data* Qx)))/sum(sum(sum(data)))
-    COM_z = sum(sum(sum(data* Qz)))/sum(sum(sum(data)))
-    COM_y = sum(sum(sum(data* Qy)))/sum(sum(sum(data)))
+    COM_x = np.sum(data* vect_Qx)/np.sum(data)
+    COM_z = np.sum(data* vect_Qz)/np.sum(data)
+    COM_y = np.sum(data* vect_Qy)/np.sum(data)
 
     print 'coordinates in reciprocal space:'
     print COM_x, COM_z, COM_y
@@ -436,7 +439,7 @@ def XRD_analysis():
                          layer=position_idx)         # layer is the first col in P.diff.storages.values()[0]
             
             # do the 3d COM analysis to find the orthogonal reciprocal space coordinates of each Bragg peak
-            COM_x, COM_z, COM_y = COM_voxels_reciproc(data_orth_coord.data[0],Qx, Qz, Qy)
+            COM_x, COM_z, COM_y = COM_voxels_reciproc(data_orth_coord.data[0], Qx, Qz, Qy)
             print 'COM_x'
             # insert coordinate in reciprocal space maps 
             XRD_x[row,col] = COM_x
@@ -445,18 +448,17 @@ def XRD_analysis():
             
             position_idx +=1
             
-            # plot every other 3d peak and print out the postion of the COM analysis
-            #if (position_idx%10=0):
-#            plt.figure()
-#            plt.imshow(sum(data_orth_coord.data[0]))
-#            print COM_x, COM_z, COM_y
+            #plot every other 3d peak and print out the postion of the COM analysis
+#            if (position_idx%10==0):
+#                plt.figure()
+#                plt.imshow(sum(data_orth_coord.data[0]))
+#                print COM_x, COM_z, COM_y
     return XRD_x, XRD_z, XRD_y, data_orth_coord
 
 XRD_x, XRD_z, XRD_y, data_orth_coord = XRD_analysis()
 
 #test plot for the coordinate system: (only works for the last position, the other peaks are not saved)
-def test_coordShift():
-            
+def test_coordShift():            
     plt.figure()
     plt.imshow(np.log10(np.sum(diff_data[-1],axis=2)), cmap='jet', interpolation='none', extent=[ q1[0], q1[-1], q3[0], q3[-1] ])
     plt.title('natural')
@@ -470,7 +472,6 @@ def test_coordShift():
     plt.ylabel('$q_z$ $ (\AA ^{-1}$)')
     plt.colorbar()        
 #test_coordShift()
-   
 
 def plot_XRD_xyz():
     # plot reciprocal space map x y z 
@@ -671,10 +672,11 @@ def plot3dvolume(): #  this looks very good, but almost never works
     # pipeline.scalar_filed makes data on a regular grid
     #mlab.pipeline.volume(data[max_pos], vmin=0, vmax=0.8)
 
+# TODO axes must be wrong here. check
 #def contour3d():   #iso surface
 mlab.figure()
-xmin=q3_orth[0]*1E0; xmax = q3_orth[-1]*1E0; ymin=q2_orth[0]*1E0; ymax=q2_orth[-1]*1E0; zmin=q1_orth[0]*1E0; zmax=q1_orth[-1]*1E0
-obj = mlab.contour3d( plot_data, contours=10, opacity=0.5, transparent=False, extent=[ q1_orth[0], q1_orth[-1],q2_orth[0], q2_orth[-1] , q3_orth[0], q3_orth[-1] ])  #  , vmin=0, vmax=0.8)
+xmin=qx[0]*1E0; xmax = qx[-1]*1E0; ymin=qy[0]*1E0; ymax=qy[-1]*1E0; zmin=qz[0]*1E0; zmax=qz[-1]*1E0
+obj = mlab.contour3d( plot_data, contours=10, opacity=0.5, transparent=False, extent=[ qz[0], qz[-1],qy[0], qy[-1] , qx[0], qx[-1] ])  #  , vmin=0, vmax=0.8)
 mlab.axes(ranges=[xmin, xmax, ymin, ymax, zmin, zmax])
 mlab.xlabel('$Q_z$ [$\AA^{-1}$]'); mlab.ylabel('$Q_y$ [$\AA^{-1}$]'); mlab.zlabel('$Q_z$ [$\AA^{-1}$]')
 #C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\scan461_\bragg_peak_stacking\InP\
@@ -682,6 +684,7 @@ mlab.xlabel('$Q_z$ [$\AA^{-1}$]'); mlab.ylabel('$Q_y$ [$\AA^{-1}$]'); mlab.zlabe
 
 
 # Another way to maka an iso surface. Can also be combined with cut planes
+position = 0 
 def iso_pipeline_plot():
     src = mlab.pipeline.scalar_field(plot_data)  # this creates a regular space data
     mlab.pipeline.iso_surface(src, contours=[diff_data[position].min()+0.1*diff_data[position].ptp(), ], opacity=0.5)
