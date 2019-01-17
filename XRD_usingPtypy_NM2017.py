@@ -369,7 +369,7 @@ plt.subplot(223)
 plt.imshow(test_shift_coord.data[0][:,:,q1max], cmap='jet', interpolation='none', extent=[qy[0]*factor, qy[-1]*factor, qx[0]*factor, qx[-1]*factor])
 plt.xlabel('$q_y$ $ (\AA ^{-1}$)') 
 plt.ylabel('$q_x$ $ (\AA ^{-1}$)'); plt.colorbar()
-
+ 
 
 ###############################################################################
 # XRD analysis
@@ -381,9 +381,6 @@ plt.ylabel('$q_x$ $ (\AA ^{-1}$)'); plt.colorbar()
 def COM_voxels_reciproc(data, vect_Qx, vect_Qz, vect_Qy ):
 
     # meshgrids for center of mass calculations in reciprocal space
-    #TODO order does not matter?
-    #TODO
-    #TODO
     COM_x = np.sum(data* vect_Qx)/np.sum(data)
     COM_z = np.sum(data* vect_Qz)/np.sum(data)
     COM_y = np.sum(data* vect_Qy)/np.sum(data)
@@ -407,13 +404,13 @@ def XRD_analysis():
             
             # if keep_dims is False, shouldnt the axis qz change? (q1 -->qz)
             data_orth_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.diff.storages.values()[0], input_space='reciprocal',
-                         input_system='natural', keep_dims=False,
+                         input_system='natural', keep_dims=True,
                          layer=position_idx)         # layer is the first col in P.diff.storages.values()[0]
       
             # do the 3d COM analysis to find the orthogonal reciprocal space coordinates of each Bragg peak
             # DODO FEl på x y z på det som kommer ut
             COM_x, COM_z, COM_y = COM_voxels_reciproc(data_orth_coord.data[0], Qx, Qz, Qy)
-            print 'COM_x'
+
             # insert coordinate in reciprocal space maps 
             XRD_x[row,col] = COM_x
             XRD_z[row,col] = COM_z
@@ -423,15 +420,15 @@ def XRD_analysis():
             
             #plot every other 3d peak and print out the postion of the COM analysis
             if (position_idx%50==0):
-                #plt.figure()
-                #plt.imshow(sum(P.diff.storages.values()[0][position_idx]), cmap = 'jet', interpolation='none', extent=[ q1[0], q1[-1], q2[0], q2[-1] ])
-                #plt.title('before shift')
-
+                # TODO very har to say anything about this looking in 2d, need 3d plots!
                 plt.figure()
-                # TODO check coordinates of extent
-                plt.imshow(data_orth_coord.data[0][:,0,:], cmap='jet', extent=[ qy[0], qy[-1], qz[0], qz[-1] ])
-                plt.scatter(COM_y, COM_z, s=500, c='red', marker='o')
-                plt.title('summed in x. COM found at red dot')
+                x_p = np.argwhere(qx>COM_x)[0][0]
+                y_p = np.argwhere(qy>COM_y)[0][0] #take the first value in qy where
+                z_p = np.argwhere(qz>COM_z)[0][0]  
+                plt.imshow(sum(data_orth_coord.data[0]), cmap='jet')#, extent=[ qy[0], qy[-1], qz[0], qz[-1] ])
+                # Find the coordinates of that cell closest to this value:              
+                plt.scatter(y_p, z_p, s=500, c='red', marker='x')#, extent=[ qy[0], qy[-1], qz[0], qz[-1] ])
+                plt.title('Single Bragg peak summed in x. COM z and y found approx at red X')
 
     return XRD_x, XRD_z, XRD_y, data_orth_coord
 
