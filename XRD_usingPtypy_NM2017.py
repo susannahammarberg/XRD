@@ -69,12 +69,12 @@ p.scans.scan01.data.maskfile = 'C:/Users/Sanna/Documents/Beamtime/NanoMAX062017/
 p.scans.scan01.data.scans = scans
 #p.scans.scan01.data.center = (155,191)#None     #can also uses =None
 p.scans.scan01.data.theta_bragg = 12.0
-p.scans.scan01.data.shape = 256# 150#150#256#150#512#150#60#290#128 --THIS
+#p.scans.scan01.data.shape = 256# 150#150#256#150#512#150#60#290#128 --THIS
 #p.scans.scan01.data.auto_center= False # dont do it..
 # ptypy says: Setting center for ROI from None to [ 75.60081158  86.26238307].   but that must be in the images that iI cut out from the detector
 
 
-p.scans.scan01.data.center = (342,245) # (200,270) #(512-170,245)     #(512-170,245) for 192_   #Seems like its y than x
+#p.scans.scan01.data.center = (342,245) # (200,270) #(512-170,245)     #(512-170,245) for 192_   #Seems like its y than x
 #calculates the center based on the first pic said Alex.  186.75310731  265.64597192] thats not wr
 
 #p.scans.scan01.data.load_parallel = 'all'
@@ -198,7 +198,7 @@ dx = (motorpositionx_AdLink[-1] - motorpositionx_AdLink[0])*1./ len(motorpositio
 
 # calc number of rows and cols that is used from measuremtn after realigning postions
 nbr_rows = len(motorpositiony) #-(np.max(p.scans.scan01.data.vertical_shift)# - np.min(p.scans.scan01.data.vertical_shift))                        
-nbr_cols = len(motorpositionx_AdLink)#-#(np.max(p.scans.scan01.data.horizontal_shift)# - np.min(p.scans.scan01.data.horizontal_shift))
+nbr_cols = len(motorpositionx_AdLink)#-(np.max(p.scans.scan01.data.horizontal_shift)# - np.min(p.scans.scan01.data.horizontal_shift))
 
 
 extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
@@ -227,9 +227,6 @@ plot_rotation = 13
 plt.figure()
 plt.imshow(sum(((diff_data[0:,plot_rotation]))),cmap='jet', interpolation='none')
 plt.title('Summed intensity for all rotations for scan %d InP NW (log)'%scans_sorted_theta[plot_rotation][1])
-
-plt.figure()
-plt.imshow((((diff_data[52,plot_rotation]))),cmap='jet', interpolation='none')
 
 # ---------------------------------------------------------
 # Do bright field analysis
@@ -286,19 +283,40 @@ def imshow(data):
     
 # define q1 q2 q3 + q_Abs from the geometry function 
 def def_q_vectors():
-    global q3, q1, q2, q_abs
-    
+    global q3, q1, q2, q_abs    
     #  units of reciprocal meters [m-1]
     q_abs = 4 * np.pi / g.lam * g.sintheta
     q3 = np.linspace(-g.dq3*g.shape[0]/2.+q_abs, g.dq3*g.shape[0]/2.+q_abs, g.shape[0])    
     q1 = np.linspace(-g.dq1*g.shape[-1]/2., g.dq1*g.shape[-1]/2., g.shape[-1])
     q2 = np.copy(q1)
 def_q_vectors()
-    
-# JW: ? Can you use the terminology from Berenguer? r-system, q-system, etc
-# Plot single position 3d bragg peak in 2d cuts using Berenguer terminology
-# plots the 'naive' Bragg peak (not skewed coordinates) in a single position in 3dim. This not nessessary for xrdd calculation.
-    
+
+# --------------------------------------------------------------
+# Make a meshgrid of q3 q1 q2 and transform it to qx qz qy.
+# Also define the vectors qx qz qy
+#----------------------------------------------------------------
+
+# in the transformation is should be input and output: (qx, qz, qy), or (q3, q1, q2).
+# make q-vectors into a tuple to transform to the orthogonal system; Large Q means meshgrid, small means vector
+Q1,Q3,Q2 = np.meshgrid(q1, q3, q2) # NOTE when you make a mesh grid the first two axes are interchanged!!!! why???
+
+tup = Q3, Q1, Q2   
+Qx, Qz, Qy = g.transformed_grid(tup, input_space='reciprocal', input_system='natural')
+# NOTE Q2-Qy should not have changed but the other ones should. note 2, Q3 and Qx should be much larger (never negative).
+qx = np.linspace(Qx.min(),Qx.max(),g.shape[0])
+qz = np.linspace(Qz.min(),Qz.max(),g.shape[-1])
+qy = np.linspace(Qy.min(),Qy.max(),g.shape[-1])
+
+#-----------------------------------------------------------------------------    
+# Find max scattering position and plot that positions 3d bragg peak in 2d cuts 
+# using Berenguer terminology
+# Plot the 'naive' Bragg peak (not skewed coordinates) in a single position in 
+# 3dim.
+# test trying to skew the system (the diff data) from the measurement coordinate system q3q1q2 (in reciprocal space)
+# to the orthogonal reciprocal space qxqzqy with the help of the ptypy class coordinate_shift in geometry_class.py 
+# (qxqzqy is what ptypy calls it, not Berenguer which has no name for it)
+#------------------------------------------------------------------------------
+
 # check which positions has the most intensity, for a nice 3d Bragg peak plot
 pos_vect_naive = np.sum(np.sum(np.sum(diff_data, axis =1), axis =1), axis =1)
 max_pos_naive = np.argmax(pos_vect_naive)
@@ -314,10 +332,8 @@ plt.suptitle('Naive plot of single position Bragg peak (Berenguer terminology) i
 plt.subplot(221)
 plt.imshow(diff_data[max_pos_naive][g.shape[0]/2,:,:], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q2[0]*factor, q2[-1]*factor])
 plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
-plt.ylabel('$q_2$ $ (\AA ^{-1}$)') 
-plt.colorbar()
-# OBS FIRST AXIS IS Y
-plt.subplot(222)
+plt.ylabel('$q_2$ $ (\AA ^{-1}$)') ; plt.colorbar()
+plt.subplot(222) # OBS FIRST AXIS IS Y
 plt.imshow(diff_data[max_pos_naive][:,q2max,:], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q3[0]*factor, q3[-1]*factor])
 plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
 plt.ylabel('$q_3$ $ (\AA ^{-1}$)'); plt.colorbar()
@@ -325,11 +341,6 @@ plt.subplot(223)
 plt.imshow(diff_data[max_pos_naive][:,:,q1max], cmap='jet', interpolation='none', extent=[q2[0]*factor, q2[-1]*factor, q3[0]*factor, q3[-1]*factor])
 plt.xlabel('$q_2$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
 plt.ylabel('$q_3$ $ (\AA ^{-1}$)'); plt.colorbar()
-
-##############################################################################
-# test trying to skew the system (the diff data) from the measurement coordinate system q3q1q2 (in reciprocal space)
-# to the orthogonal reciprocal space qxqzqy with the help of the ptypy class coordinate_shift in geometry_class.py 
-# (qxqzqy is what ptypy calls it, not Berenguer which has no name for it)
 
 #TODO make a copy of the data instead of putting into diff storage. but it must be a ptypy storage as input in coordinate_shift.
 # here I put the masked data in the data. for all frames. So this I need to keep before xrd analysis. (or make a new storage with masked data) 
@@ -341,67 +352,28 @@ test_shift_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.dif
 # check if the data look good and is masked
 plt.figure()
 plt.imshow(np.log10(sum(test_shift_coord.data[0])))
-plt.title('Check it there are hot pixels in here');  plt.colorbar()
-#########################################################
-# plot  the peak now shifted to the orthoganal space qxqzqy, in the same postion as the previous plot of the natural system
-# and centered on the peak for q1 and q2 
+plt.title('Check if there are hot pixels in here');  plt.colorbar()
+
 factor = 1E-10  #if you want to plot in m or Angstroms, user 1 or 1E-10
 plt.figure()
 plt.suptitle('Single position Bragg peak in orthogonal system (Berenguer terminology) qxqzqy')
 plt.subplot(221)
-plt.imshow(test_shift_coord.data[0][g.shape[0]/2,:,:], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q2[0]*factor, q2[-1]*factor])
+plt.imshow(test_shift_coord.data[0][g.shape[0]/2,:,:], cmap='jet', interpolation='none', extent=[qz[0]*factor, qz[-1]*factor, qy[0]*factor, qy[-1]*factor])
 plt.xlabel('$q_z$ $ (\AA ^{-1}$)')   
 plt.ylabel('$q_y$ $ (\AA ^{-1}$)');  plt.colorbar()
 plt.subplot(222)
-plt.imshow(test_shift_coord.data[0][:,q2max,:], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q3[0]*factor, q3[-1]*factor])
+plt.imshow(test_shift_coord.data[0][:,q2max,:], cmap='jet', interpolation='none', extent=[qz[0]*factor, qz[-1]*factor, qx[0]*factor, qx[-1]*factor])
 plt.xlabel('$q_z$ $ (\AA ^{-1}$)')   
 plt.ylabel('$q_x$ $ (\AA ^{-1}$)'); plt.colorbar()
 plt.subplot(223)
-plt.imshow(test_shift_coord.data[0][:,:,q1max], cmap='jet', interpolation='none', extent=[q2[0]*factor, q2[-1]*factor, q3[0]*factor, q3[-1]*factor])
+plt.imshow(test_shift_coord.data[0][:,:,q1max], cmap='jet', interpolation='none', extent=[qy[0]*factor, qy[-1]*factor, qx[0]*factor, qx[-1]*factor])
 plt.xlabel('$q_y$ $ (\AA ^{-1}$)') 
 plt.ylabel('$q_x$ $ (\AA ^{-1}$)'); plt.colorbar()
 
-# --------------------------------------------------------------
-# Make a meshgrid of q3 q1 q2 and transform it to qx qz qy
-#----------------------------------------------------------------
-#1 3 2 
-# in the transformation is should be input and output: (qx, qz, qy), or (q3, q1, q2).
-# make q-vectors into a tuple to transform to the orthogonal system; Large Q means meshgrid, small means vector
-Q1,Q3,Q2 = np.meshgrid(q1, q3, q2) # NOTE when you make a mesh grid the first two axes are interchanged!!!! why???
-
-tup = Q3, Q1, Q2   
-Qx, Qz, Qy = g.transformed_grid(tup, input_space='reciprocal', input_system='natural')
-# NOTE Q2-Qy should not have changed but the other ones should. note 2, Q3 and Qx should be much larger (never negative).
-qx = np.linspace(Qx.min(),Qx.max(),g.shape[0])
-qz = np.linspace(Qz.min(),Qz.max(),g.shape[-1])
-qy = np.linspace(Qx.min(),Qx.max(),g.shape[-1])
-
-#TODO remove this but first check how wrong it was. write down the thing i did wrong.  innan var det :
-#tup = q1, q2, q3   # SU SKA HA ETT GRID, DET HÄR ÄR INGET GRID
-#q1_o, q2_o, q3_o = g.transformed_grid(tup, input_space='reciprocal', input_system='natural')
-
-#compare natural and unscewed coordinate systems:
-# TODO is this plotting correct?
-plt.figure()
-plt.imshow(np.log10(np.sum(diff_data[max_pos_naive],axis=2)), cmap='jet', interpolation='none', extent=[ q1[0]*factor, q1[-1]*factor, q3[0]*factor, q3[-1]*factor ])
-plt.title('natural')
-plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   
-plt.ylabel('$q_3$ $ (\AA ^{-1}$)')
-plt.colorbar()
-plt.figure()
-plt.imshow(np.log10(np.sum(test_shift_coord.data[0],axis=2)), cmap='jet', interpolation='none',  extent=[ qz[0]*factor, qz[-1]*factor, qx[0]*factor, qx[-1]*factor ])
-plt.title('orthogonal')
-plt.xlabel('$q_z$ $ (\AA ^{-1}$)')
-plt.ylabel('$q_x$ $ (\AA ^{-1}$)')
-plt.colorbar()
-# and 3d cuts
-#plot3d_singleBraggpeak(np.log10(data[position]))
 
 ###############################################################################
 # XRD analysis
 ###############################################################################
-
-
 
 # TODO: remove single photon count, if the COM is calculated for very small values like pixels with 1 photon counts, 
 #then the result will be missleading. Set a threshold that keeps the resulting pixel on a mean value, like if sum(sum(sum(diffPattern)))< threshold. sum(sum(sum()))==bkg_value
@@ -420,11 +392,11 @@ def COM_voxels_reciproc(data, vect_Qx, vect_Qz, vect_Qy ):
     print COM_x, COM_z, COM_y
     return COM_x, COM_z, COM_y
 
-
 # loop through all scanning postitions and move the 3D Bragg peak from the 
 # natural to the orthogonal coordinate system (to be able to calculate COM)
 # Calculate COM for every peak - this gives the XRD matrices
 def XRD_analysis():
+    print 'hej'
     position_idx = 0
     XRD_x = np.zeros((nbr_rows,nbr_cols))
     XRD_z = np.zeros((nbr_rows,nbr_cols))
@@ -433,12 +405,13 @@ def XRD_analysis():
     for row in range(0,nbr_rows):
         for col in range(0,nbr_cols):
             
-            
+            # if keep_dims is False, shouldnt the axis qz change? (q1 -->qz)
             data_orth_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.diff.storages.values()[0], input_space='reciprocal',
-                         input_system='natural', keep_dims=True,
+                         input_system='natural', keep_dims=False,
                          layer=position_idx)         # layer is the first col in P.diff.storages.values()[0]
-            
+      
             # do the 3d COM analysis to find the orthogonal reciprocal space coordinates of each Bragg peak
+            # DODO FEl på x y z på det som kommer ut
             COM_x, COM_z, COM_y = COM_voxels_reciproc(data_orth_coord.data[0], Qx, Qz, Qy)
             print 'COM_x'
             # insert coordinate in reciprocal space maps 
@@ -449,10 +422,17 @@ def XRD_analysis():
             position_idx +=1
             
             #plot every other 3d peak and print out the postion of the COM analysis
-#            if (position_idx%10==0):
-#                plt.figure()
-#                plt.imshow(sum(data_orth_coord.data[0]))
-#                print COM_x, COM_z, COM_y
+            if (position_idx%50==0):
+                #plt.figure()
+                #plt.imshow(sum(P.diff.storages.values()[0][position_idx]), cmap = 'jet', interpolation='none', extent=[ q1[0], q1[-1], q2[0], q2[-1] ])
+                #plt.title('before shift')
+
+                plt.figure()
+                # TODO check coordinates of extent
+                plt.imshow(data_orth_coord.data[0][:,0,:], cmap='jet', extent=[ qy[0], qy[-1], qz[0], qz[-1] ])
+                plt.scatter(COM_y, COM_z, s=500, c='red', marker='o')
+                plt.title('summed in x. COM found at red dot')
+
     return XRD_x, XRD_z, XRD_y, data_orth_coord
 
 XRD_x, XRD_z, XRD_y, data_orth_coord = XRD_analysis()
