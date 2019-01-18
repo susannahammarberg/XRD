@@ -39,7 +39,7 @@ from ptypy.experiment.nanomax3d import NanomaxBraggJune2017 # after update need 
 p = u.Param()
 p.run = 'XRD_JWX33'   # 'XRD_InP'
 
-sample = 'JWX33_NW2'; scans = range(192, 200+1)+range(205, 222+1)
+sample = 'JWX33_NW2'; scans = range(192, 200+1)+range(205, 222+1) #range(192, 195)# 
 #sample = 'JWX29A_NW1'; scans = [458,459,460,461,462,463,464,465,466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
 
 p.data_type = "single"   #or "double"
@@ -67,20 +67,25 @@ p.scans.scan01.data.detfilepattern = 'scan_%04d_merlin_%04d.hdf5'
 # not sure if this loads properly
 p.scans.scan01.data.maskfile = 'C:/Users/Sanna/Documents/Beamtime/NanoMAX062017/merlin_mask.h5'
 p.scans.scan01.data.scans = scans
-#p.scans.scan01.data.center = (155,191)#None     #can also uses =None
-p.scans.scan01.data.theta_bragg = 12.0
-#p.scans.scan01.data.shape = 256# 150#150#256#150#512#150#60#290#128 --THIS
-#p.scans.scan01.data.auto_center= False # dont do it..
+p.scans.scan01.data.theta_bragg = 12.0   # not calibrated
+raw_center = (342,245)
+
+p.scans.scan01.data.shape = 150    #256
+p.scans.scan01.data.auto_center= False # 
 # ptypy says: Setting center for ROI from None to [ 75.60081158  86.26238307].   but that must be in the images that iI cut out from the detector
-
-
-#p.scans.scan01.data.center = (342,245) # (200,270) #(512-170,245)     #(512-170,245) for 192_   #Seems like its y than x
+detind0 = raw_center[0] - p.scans.scan01.data.shape/2
+detind1 = raw_center[0] + p.scans.scan01.data.shape/2
+detind2 = raw_center[1] - p.scans.scan01.data.shape/2
+detind3 = raw_center[1] + p.scans.scan01.data.shape/2
+p.scans.scan01.data.detector_roi_indices = [detind0,detind1,detind2,detind3]  # this one should not be needed since u have shape and center...
+p.scans.scan01.data.center = (raw_center[0] - detind0,raw_center[1] - detind2) # (200,270) #(512-170,245)     #(512-170,245) for 192_   #Seems like its y than x
+# tprev used:  [275,425,150,300]
 #calculates the center based on the first pic said Alex.  186.75310731  265.64597192] thats not wr
 
 #p.scans.scan01.data.load_parallel = 'all'
 p.scans.scan01.data.psize = 55e-6
 p.scans.scan01.data.energy = 9.49
-p.scans.scan01.data.distance =  0.7   #or 1?
+p.scans.scan01.data.distance =  1.065
 
 # This shifts the entire scan (projection) in real space, in units of steps 
 ##############################################################################
@@ -111,7 +116,7 @@ p.scans.scan01.data.distance =  0.7   #or 1?
 #p.scans.scan01.data.vertical_shift = [ 0, 0, 1, 2, 2, 2, 3, 3, 3, 1, 0, 0, 0, 0, 0, -2, -2, -2, -3, -3, -2, -2,  -3, -2, -3, -3,  -4]
 #p.scans.scan01.data.horizontal_shift = [ -8, -8, -8, -8, -8, -3, -2, -4, 0, -5, -3, -6, -3, -6, -3, -5, -5, -7, -4,  -7, -3, -6, -2, -7, -2, -6, -3 ] 
 
-#p.scans.scan01.data.detector_roi_indices = [275,425,150,300]  # this one should not be needed since u have shape and center...
+
 
 p.scans.scan01.illumination = u.Param()
 p.scans.scan01.illumination.aperture = u.Param() 
