@@ -67,7 +67,7 @@ p.scans.scan01.data.detfilepattern = 'scan_%04d_merlin_%04d.hdf5'
 # not sure if this loads properly
 p.scans.scan01.data.maskfile = 'C:/Users/Sanna/Documents/Beamtime/NanoMAX062017/merlin_mask.h5'
 p.scans.scan01.data.scans = scans
-p.scans.scan01.data.theta_bragg = 12.0   # not calibrated
+p.scans.scan01.data.theta_bragg = 11.9   # not calibrated (max experimental-real Bragg peak value)
 raw_center = (342,245)
 
 p.scans.scan01.data.shape = 150    #256
