@@ -67,11 +67,11 @@ p.scans.scan01.data.detfilepattern = 'scan_%04d_merlin_%04d.hdf5'
 # not sure if this loads properly
 p.scans.scan01.data.maskfile = 'C:/Users/Sanna/Documents/Beamtime/NanoMAX062017/merlin_mask.h5'
 p.scans.scan01.data.scans = scans
-p.scans.scan01.data.theta_bragg = 11.9   # not calibrated (max experimental-real Bragg peak value)
+p.scans.scan01.data.theta_bragg = 11.0  # calibrated   
 raw_center = (342,245)
 
-p.scans.scan01.data.shape = 150    #256
-p.scans.scan01.data.auto_center= False # 
+p.scans.scan01.data.shape = 256    #256 # needs to be an even numbver for using shifting
+p.scans.scan01.data.auto_center = False # 
 # ptypy says: Setting center for ROI from None to [ 75.60081158  86.26238307].   but that must be in the images that iI cut out from the detector
 detind0 = raw_center[0] - p.scans.scan01.data.shape/2
 detind1 = raw_center[0] + p.scans.scan01.data.shape/2
@@ -85,7 +85,8 @@ p.scans.scan01.data.center = (raw_center[0] - detind0,raw_center[1] - detind2) #
 #p.scans.scan01.data.load_parallel = 'all'
 p.scans.scan01.data.psize = 55e-6
 p.scans.scan01.data.energy = 9.49
-p.scans.scan01.data.distance =  1.065
+# TODO change d
+p.scans.scan01.data.distance = 1.149 # =sqrt(1.065**2 + 0.43**2) is the distance along optical axis
 
 # This shifts the entire scan (projection) in real space, in units of steps 
 ##############################################################################
@@ -102,21 +103,19 @@ p.scans.scan01.data.distance =  1.065
 ##############################################################################
 # homogenius NWs
 ##############################################################################
-#p.scans.scan01.data.vertical_shift = [1] * len(scans) 
-#p.scans.scan01.data.horizontal_shift = [1] * len(scans) 
+p.scans.scan01.data.vertical_shift = [1] * len(scans) 
+p.scans.scan01.data.horizontal_shift = [1] * len(scans) 
             # referens ska vara 0, alla andra -
             #open this file
 # when it says horizontal i have used vertical because i am an i
 # I will just have fo change the names everyw here             
-#p.scans.scan01.data.horizontal_shift = list(np.load('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\ptycho_192_222\\horizontal_shift_vector.npy'))
+p.scans.scan01.data.horizontal_shift = list(np.load('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\ptycho_192_222\\horizontal_shift_vector.npy'))
 #vertical_shift_vector
-#p.scans.scan01.data.vertical_shift = list(np.load('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\ptycho_192_222\\vertical_shift_vector.npy'))
+p.scans.scan01.data.vertical_shift = list(np.load('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\ptycho_192_222\\vertical_shift_vector.npy'))
 
 # TODO is this what I should use, or the list in the prev. row?            
 #p.scans.scan01.data.vertical_shift = [ 0, 0, 1, 2, 2, 2, 3, 3, 3, 1, 0, 0, 0, 0, 0, -2, -2, -2, -3, -3, -2, -2,  -3, -2, -3, -3,  -4]
 #p.scans.scan01.data.horizontal_shift = [ -8, -8, -8, -8, -8, -3, -2, -4, 0, -5, -3, -6, -3, -6, -3, -5, -5, -7, -4,  -7, -3, -6, -2, -7, -2, -6, -3 ] 
-
-
 
 p.scans.scan01.illumination = u.Param()
 p.scans.scan01.illumination.aperture = u.Param() 
@@ -202,8 +201,8 @@ motorpositionx_AdLink = np.trim_zeros(motorpositionx_AdLink)
 dx = (motorpositionx_AdLink[-1] - motorpositionx_AdLink[0])*1./ len(motorpositionx_AdLink)
 
 # calc number of rows and cols that is used from measuremtn after realigning postions
-nbr_rows = len(motorpositiony) #-(np.max(p.scans.scan01.data.vertical_shift)# - np.min(p.scans.scan01.data.vertical_shift))                        
-nbr_cols = len(motorpositionx_AdLink)#-(np.max(p.scans.scan01.data.horizontal_shift)# - np.min(p.scans.scan01.data.horizontal_shift))
+nbr_rows = len(motorpositiony) - np.max(p.scans.scan01.data.vertical_shift)# - np.min(p.scans.scan01.data.vertical_shift))                        
+nbr_cols = len(motorpositionx_AdLink) - np.max(p.scans.scan01.data.horizontal_shift)# - np.min(p.scans.scan01.data.horizontal_shift))
 
 
 extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
@@ -359,7 +358,7 @@ plt.figure()
 plt.imshow(np.log10(sum(test_shift_coord.data[0])))
 plt.title('Check if there are hot pixels in here');  plt.colorbar()
 
-factor = 1E-10  #if you want to plot in m or Angstroms, user 1 or 1E-10
+factor = 1E-10  #if you want to plot in reciprocal m or Angstroms, user 1 or 1E-10
 plt.figure()
 plt.suptitle('Single position Bragg peak in orthogonal system (Berenguer terminology) qxqzqy')
 plt.subplot(221)
@@ -398,7 +397,6 @@ def COM_voxels_reciproc(data, vect_Qx, vect_Qz, vect_Qy ):
 # natural to the orthogonal coordinate system (to be able to calculate COM)
 # Calculate COM for every peak - this gives the XRD matrices
 def XRD_analysis():
-    print 'hej'
     position_idx = 0
     XRD_x = np.zeros((nbr_rows,nbr_cols))
     XRD_z = np.zeros((nbr_rows,nbr_cols))
@@ -430,14 +428,14 @@ def XRD_analysis():
                 x_p = np.argwhere(qx>COM_x)[0][0]
                 y_p = np.argwhere(qy>COM_y)[0][0] #take the first value in qy where
                 z_p = np.argwhere(qz>COM_z)[0][0]  
-                plt.imshow(sum(data_orth_coord.data[0]), cmap='jet')#, extent=[ qy[0], qy[-1], qz[0], qz[-1] ])
+                plt.imshow(sum(data_orth_coord.data[0]), cmap='jet', extent=[ qy[0], qy[-1], qz[0], qz[-1] ])
                 # Find the coordinates of that cell closest to this value:              
                 plt.scatter(y_p, z_p, s=500, c='red', marker='x')#, extent=[ qy[0], qy[-1], qz[0], qz[-1] ])
                 plt.title('Single Bragg peak summed in x. COM z and y found approx at red X')
 
     return XRD_x, XRD_z, XRD_y, data_orth_coord
 
-XRD_x, XRD_z, XRD_y, data_orth_coord = XRD_analysis()
+XRD_x, XRD_z, XRD_y, data_orth_coord = XRD_analysis() # units of 1/m
 
 #test plot for the coordinate system: (only works for the last position, the other peaks are not saved)
 def test_coordShift():            
@@ -454,28 +452,29 @@ def test_coordShift():
     plt.ylabel('$q_z$ $ (\AA ^{-1}$)')
     plt.colorbar()        
 #test_coordShift()
+factor = 1E-10  #if you want to plot in m or Angstroms, user 1 or 1E-10
 
 def plot_XRD_xyz():
     # plot reciprocal space map x y z 
     plt.figure()
     plt.subplot(411)
-    plt.imshow(XRD_x, cmap='jet',interpolation='none',extent=extent_motorpos)
+    plt.imshow(factor*XRD_x, cmap='jet',interpolation='none',extent=extent_motorpos)
     plt.title('Reciprocal space map, $q_x$ $ (\AA ^{-1}$) ')
     plt.ylabel('y [$\mu m$]')
     plt.colorbar()
     plt.subplot(412)
-    plt.imshow(XRD_y, cmap='jet',interpolation='none',extent=extent_motorpos) 
+    plt.imshow(factor*XRD_y, cmap='jet',interpolation='none',extent=extent_motorpos) 
     plt.title('Reciprocal space map, $q_y$ $ (\AA ^{-1}$) ')
     plt.ylabel('y [$\mu m$]')
     plt.colorbar()
     plt.subplot(413)
-    plt.imshow(XRD_z, cmap='jet',interpolation='none',extent=extent_motorpos)
+    plt.imshow(factor*XRD_z, cmap='jet',interpolation='none',extent=extent_motorpos)
     plt.title('Reciprocal space map, $q_z$ $(\AA ^{-1}$) ')
     plt.ylabel('y [$\mu m$]')
     plt.colorbar()
     plt.subplot(414)
     plt.title('Bright field (sum of all rotations)')
-    plt.imshow(sum(brightfield), cmap='jet', interpolation='none',extent=extent_motorpos)
+    plt.imshow(sum(brightfield)/sum(brightfield).max(), cmap='jet', interpolation='none',extent=extent_motorpos)
     plt.xlabel('x [$\mu m$]') 
     plt.ylabel('y [$\mu m$]')
     plt.colorbar()
@@ -503,7 +502,7 @@ def plot_XRD_polar():
     #plt.suptitle(
     plt.subplot(411)
     plt.title('Summed up intensity (bright field)') #sum of all rotations
-    plt.imshow(sum(brightfield[:,:,0:]), cmap='jet', interpolation='none',extent=extent_motorpos)
+    plt.imshow(sum(brightfield[:,:,0:])/sum(brightfield).max(), cmap='jet', interpolation='none',extent=extent_motorpos)
     plt.ylabel('y [$\mu m$]')
     #po = plt.colorbar(ticks=(10,20,30,40))#,fraction=0.046, pad=0.04) 
     plt.colorbar()
@@ -516,8 +515,9 @@ def plot_XRD_polar():
     XRD_mask = np.ones((XRD_mask.shape))
     
     plt.subplot(412)   
-    #calculate lattice constant a from |q|:                             
-    a_lattice_exp = np.pi*2./ XRD_absq *np.sqrt(3)
+    #calculate lattice constant a from |q|:       
+    # TODO: this is wrong for the homogenous wires, its not (111)                      
+    a_lattice_exp = np.pi*2./ (XRD_absq *np.sqrt(3))
     #imshow(a_lattice_exp)
     #plt.title('Lattice conastant a [$\AA$]')
     mean_strain = np.nanmean(XRD_mask[:,start_cutXat:cutXat]*a_lattice_exp[:,start_cutXat:cutXat])
@@ -576,7 +576,7 @@ def XRD_lineplot():
     #plt.title('BF intensity')
     plt.plot(sum(brightfield)[plot,:] )
 
-#XRD_lineplot()    
+XRD_lineplot()    
     
     
 def save_np_array(nparray):
