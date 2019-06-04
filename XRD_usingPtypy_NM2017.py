@@ -522,7 +522,7 @@ def plot_XRD_polar():
     plt.subplot(413)
     plt.imshow(XRD_mask[:,start_cutXat:cutXat]*1E3*XRD_alpha[:,start_cutXat:cutXat], cmap='jet',interpolation='none',extent=extent_motorpos_cut) # not correct!
     # cut in extent_motorposition. x-pixel nbr 67 is at 2.0194197798363955
-    plt.title('Rotation around $q_x$ ($mrad$)')
+    plt.title('$\\alpha$ ($mrad$)')
     plt.ylabel('y [$\mu m$]')
     po = plt.colorbar()
     #po = plt.colorbar(ticks=(0,1,2,3,4))
@@ -530,7 +530,7 @@ def plot_XRD_polar():
    
     plt.subplot(414)
     plt.imshow(XRD_mask[:,start_cutXat:cutXat]*1E3*XRD_beta[:,start_cutXat:cutXat], cmap='jet',interpolation='none',extent=extent_motorpos_cut) # not correct!
-    plt.title('Rotation around $q_y$ ($mrad$) ')
+    plt.title('$\\beta$ ($mrad$)')
     plt.ylabel('y [$\mu m$]')
     plt.xlabel('x [$\mu m$]') 
     po = plt.colorbar()
