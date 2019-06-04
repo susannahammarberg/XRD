@@ -267,14 +267,16 @@ def imshow(data):
     plt.imshow(data, cmap='jet')
     plt.colorbar()
     
-# define q1 q2 q3 + q_Abs from the geometry function 
+#%%    
+# define q1 q2 q3 + q_abs from the geometry function 
+# (See "Bending and tilts in NW..." pp)
 def def_q_vectors():
     global q3, q1, q2, q_abs    
     #  units of reciprocal meters [m-1]
     q_abs = 4 * np.pi / g.lam * g.sintheta
-    q3 = np.linspace(-g.dq3*g.shape[0]/2., g.dq3*g.shape[0]/2., g.shape[0])    
-    q1 = np.linspace( -g.dq1*g.shape[1]/2.+q_abs*g.costheta, g.dq1*g.shape[1]/2.+q_abs*g.costheta, g.shape[1]) #        ~z
-    q2 = np.linspace(-g.dq2*g.shape[2]/2., g.dq2*g.shape[2]/2., g.shape[2])#         ~y
+    q3 = np.linspace(-g.dq3*g.shape[0]/2. , g.dq3*g.shape[0]/2., g.shape[0])    
+    q1 = np.linspace(-g.dq1*g.shape[1]/2.+q_abs/g.costheta, g.dq1*g.shape[1]/2.+q_abs/g.costheta, g.shape[1]) #        ~z
+    q2 = np.linspace(-g.dq2*g.shape[2]/2., g.dq2*g.shape[2]/2., g.shape[2]) #         ~y
 def_q_vectors()
 
 # --------------------------------------------------------------
