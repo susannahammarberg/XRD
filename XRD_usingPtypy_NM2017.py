@@ -462,13 +462,18 @@ def plot_XRD_xyz():
     plt.colorbar()
 plot_XRD_xyz()
 
-# calc abs q and the angles
-XRD_absq =  np.sqrt(XRD_qx**2 + XRD_qy**2 + XRD_qz**2)
-XRD_alpha2 =   XRD_qy/ XRD_qz
-#TODO check these rotations!
-XRD_alpha = np.arctan(XRD_qy / XRD_qz)
-XRD_beta = (-XRD_qx / XRD_qz)
+#%% 
+#----------------------------------------------------------
+# Convert q-vector from  cartesian coordinates to spherical
+# (See "Bending and tilts in NW..." pp)
+#----------------------------------------------------------
 
+XRD_absq =  np.sqrt(XRD_qx**2 + XRD_qy**2 + XRD_qz**2)
+XRD_alpha = np.arcsin( XRD_qy/ XRD_absq)
+XRD_beta  = np.arctan( XRD_qx / XRD_qz)
+
+
+#%%
 def plot_XRD_polar():    
     # cut the images in x-range:start from the first pixel: 
     # remove the 1-pixel. (cheating) Did not remove it the extent, because then the 0 will not be shown in the X-scale and that will look weird
