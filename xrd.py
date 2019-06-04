@@ -9,6 +9,7 @@ XRD as a separate function
 print 'test3'
 # input P
 def XRD_fun(P, scans, shape):
+    
 	
 
   import ptypy
@@ -70,8 +71,8 @@ def XRD_fun(P, scans, shape):
     dq3= np.deg2rad(0.02) * q_abs
     global q3, q1, q2
     
-    q3 = np.linspace(-dq3*len(scans)/2.+q_abs, dq3*len(scans)/2+q_abs, len(scans))    
-    q1 = np.linspace(-dq1*shape/2, dq1*shape/2, shape)
+    q3 = np.linspace(-dq3*len(scans)/2., dq3*len(scans)/2, len(scans))    
+    q1 = np.linspace( -g.dq1*g.shape[1]/2.+q_abs*g.costheta, g.dq1*g.shape[1]/2.+q_abs*g.costheta, g.shape[1]) #        ~z
     q2 = np.copy(q1)
   def_q_vectors()
 
