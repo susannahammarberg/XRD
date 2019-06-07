@@ -394,20 +394,23 @@ factor = 1E-10  #if you want to plot in m or Angstroms, user 1 or 1E-10
 plt.figure()
 plt.suptitle('Naive plot of single position Bragg peak in natural coord system')
 plt.subplot(221)
-plt.imshow(plot_3d_naive[g.shape[0]/2,:,:], cmap='jet', interpolation='none')#, extent=[q1[0]*factor, q1[-1]*factor, q2[0]*factor, q2[-1]*factor])
+plt.imshow(plot_3d_naive[g.shape[0]/2,:,:], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q2[0]*factor, q2[-1]*factor])
 plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
 plt.ylabel('$q_2$ $ (\AA ^{-1}$)') ; plt.colorbar()
 plt.subplot(222) # OBS FIRST AXIS IS Y
-plt.imshow(plot_3d_naive[:,q2max,:], cmap='jet', interpolation='none')#, extent=[q1[0]*factor, q1[-1]*factor, q3[0]*factor, q3[-1]*factor])
+plt.imshow(plot_3d_naive[:,q2max,:], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q3[0]*factor, q3[-1]*factor])
 plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
 plt.ylabel('$q_3$ $ (\AA ^{-1}$)'); plt.colorbar()
 plt.subplot(223)
-plt.imshow(plot_3d_naive[:,:,q1max], cmap='jet', interpolation='none')#, extent=[q2[0]*factor, q2[-1]*factor, q3[0]*factor, q3[-1]*factor])
+plt.imshow(plot_3d_naive[:,:,q1max], cmap='jet', interpolation='none', extent=[q2[0]*factor, q2[-1]*factor, q3[0]*factor, q3[-1]*factor])
 plt.xlabel('$q_2$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
 plt.ylabel('$q_3$ $ (\AA ^{-1}$)'); plt.colorbar()
 
-#plt.figure()
-#plt.plot(sum(plot_3d_naive[:,:,q1max])
+
+plot_3d_naive[plot_3d_naive==np.inf] = 0
+plt.figure()
+plt.title('fft back to real space')
+plt.imshow(abs(np.fft.fftshift(np.fft.fft2(plot_3d_naive[:,:,q1max]))))
 
 plt.figure()
 plt.title('Bragg peak summed over rotation axis q3')
@@ -493,7 +496,7 @@ def XRD_analysis():
             position_idx +=1
         
             #plot every other 3d peak and print out the postion of the COM analysis
-            if (position_idx%50==0):
+            if (position_idx%100==0):
                 # TODO very har to say anything about this looking in 2d, need 3d plots!
                
                 x_p = np.argwhere(qx>COM_qx)[0][0]
@@ -666,8 +669,10 @@ def XRD_lineplot():
     for i in range(start,XRD_absq.shape[0]):
         plt.plot(x,XRD_beta[i,:] ) # choose a row in the middle of the wire  
     plt.subplot(414)
-    #plt.title('BF intensity')
-    plt.plot(x,sum(brightfield)[plot,:] )
+    
+    plt.figure()
+    plt.title('BF intensity summed in y')
+    plt.plot(sum(brightfield)[plot,:] )
     plt.xlabel('x [um]')
 
 XRD_lineplot()    
