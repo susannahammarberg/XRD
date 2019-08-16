@@ -42,10 +42,13 @@ p = u.Param()
 p.run = 'XRD_29A_inP_realprobe'   # 'XRD_InP'
 
 #sample = 'JWX33_NW2'; scans = range(192, 200+1)+range(205, 222+1) #range(192, 195)# 
+#sample = 'JWX29A_NW1'; scans = [483,484,485] # ~~central rotations
 sample = 'JWX29A_NW1'; scans = [458,459,460,461,462,463,464,465,466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
+# obs temp list
+###sample = 'JWX29A_NW1'; scans = [470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500]
 p.data_type = "single"   #or "double"
 # for verbose output
-p.verbose_level = 5
+p.verbose_level = 1
 
 # use special plot layout for 3d data  (but the io.home part tells ptypy where to save recons and dumps)
 p.io = u.Param()
@@ -62,7 +65,8 @@ p.scans.scan01.name = 'Bragg3dModel'
 p.scans.scan01.data = u.Param()
 p.scans.scan01.data.name = 'NanomaxBraggJune2017'
 #base= 'D:/exp20170628_Wallentin_nanomax/exp20170628_Wallentin/'
-p.scans.scan01.data.datapath = 'D:/exp20170628_Wallentin_nanomax/exp20170628_Wallentin/%s/' % sample
+p.scans.scan01.data.datapath ='C:/Users/Sanna/temp_rawdata/rawdata/'
+
 p.scans.scan01.data.datafile = '%s.h5' % sample
 p.scans.scan01.data.detfilepattern = 'scan_%04d_merlin_%04d.hdf5'
 # not sure if this loads properly
@@ -72,7 +76,9 @@ p.scans.scan01.data.theta_bragg = 11.0  # calibrated for homogeneous wires to 11
 #raw_center = (342,245) #for homogeneous wires
 #raw_center = (190,330) #  for InGaP in segmented NWs
 raw_center = (190,190) # for InP in segmented NWs
-p.scans.scan01.data.shape = 150#150    #256 for homogeneous# needs to be an EVEN number for using shifting
+#raw_center = (256,256)
+# 180
+p.scans.scan01.data.shape = 150    #256 for homogeneous# needs to be an EVEN number for using shifting
 p.scans.scan01.data.auto_center = False # 
 # ptypy says: Setting center for ROI from None to [ 75.60081158  86.26238307].   but that must be in the images that iI cut out from the detector
 detind0 = raw_center[0] - p.scans.scan01.data.shape/2
@@ -97,6 +103,7 @@ p.scans.scan01.data.distance = 1.149 # =sqrt(1.065**2 + 0.43**2) is the distance
 # the smallers values here (minus values) will include the 0:th scanning position
 ##TODO test with no shifting and compare result: [0]*51 #
 #TODO more is to do the automatic shifting for these scans!!
+
 p.scans.scan01.data.vertical_shift =  [-1,-1,0,0,0,  0,0,2,1,0,  1,1,1,0,-1,  -1,-1,-1,-1,0,  -1,-1,0,0,1,  1,-1,0,1,0,   2,0,0,1,1,  1,0,0,1,1,  1,2,2,2,4,  3,3,3,3,3,   3]
 p.scans.scan01.data.horizontal_shift =  [3,2,0,1,2,  3,4,3,4,5,  5,6,6,5,6,  5,4,7,8,8,  8,8,10,11,12,  11,12,12,11,12,  12,11,12,13,13,  14,15,14,14,14,  13,15,16,15,14,  17,19,18,18,17,   17]
             # InGaP = [116:266,234:384]
@@ -109,6 +116,7 @@ p.scans.scan01.data.horizontal_shift =  [3,2,0,1,2,  3,4,3,4,5,  5,6,6,5,6,  5,4
 ## for not using shifts:            
 #p.scans.scan01.data.vertical_shift = [1] * len(scans) 
 #p.scans.scan01.data.horizontal_shift = [1] * len(scans) 
+
 #            # referens ska vara 0, alla andra -
 #            #open this file
 ## when it says horizontal i have used vertical because i am an i
@@ -163,12 +171,6 @@ import sys   #to collect system path ( to collect function from another director
 sys.path.insert(0, 'C:/Users/Sanna/Documents/python_utilities') #can I collect all functions in this folder?
 from movie_maker import movie_maker
 import h5py
-#temp: plot probe
-plt.figure()
-plt.subplot(121)
-plt.imshow(abs(np.squeeze(P.probe.storages.values()[0].data)[1]))
-plt.subplot(122)
-plt.imshow(np.angle(np.squeeze(P.probe.storages.values()[0].data)[1]))
 
 # gather motorpositions from first rotation in scan list for plotting
 scan_name_int = scans[2]
@@ -178,9 +180,8 @@ metadata = h5py.File( metadata_directory ,'r')
 motorpositions_directory = '/entry%s' %scan_name_string  
 
 # gonphi is the rotation of the rotatation stage on which all motors samx/y/z and samsx/y/z and sample rests on.
-# when gonphi is orthoganoal to the incoming beam, it is equal to 180. Therfore, 
-# get the list of scans numbers and theta (read from gonphi)
-#todo is this correct for segmenter nw 
+# when gonphi is orthoganoal to the incoming beam, it is equal to 180. Read in gonphi and 
+# get the list of scans numbers and theta (=180-gonphi) and gonphi
 def sort_scans_after_theta():
     gonphi_list = []
     # read in all gonphi postins
@@ -196,12 +197,9 @@ def sort_scans_after_theta():
     # order the scan list after gonphi
     # first put them together
     theta_array = 180 - np.array(gonphi_list)
-    zipped = zip(theta_array,scans)
-    # then sort after the first col
+    zipped = zip(gonphi_list,theta_array,scans)
+    # then sort after the first col (gonphi)
     zipped.sort()
-    # Now, because gonphi is gonphi = 180 - theta, and the data is sorted with higher gonphi,
-    # for this list to correspond to how the data is sorted in diffdata, this list should be reversed
-    zipped = np.flipud(zipped)
     return zipped
 scans_sorted_theta = sort_scans_after_theta()  
       
@@ -209,13 +207,13 @@ scans_sorted_theta = sort_scans_after_theta()
 # calculate mean value of dy
 # positive samy movement moves sample positive in y (which means the beam moves Down on the sample)
 motorpositiony = np.array(metadata.get(motorpositions_directory + '/measurement/samy'))
-dy = (motorpositiony[-1] - motorpositiony[0])*1./len(motorpositiony)
+dy = (motorpositiony[-1] - motorpositiony[0])*1./ (len(motorpositiony) -1)
 
 # calculate mean value of dx
 # instead of samx, you find the motorposition in flysca ns from 'adlink_buff' # obs a row of zeros after values in adlinkAI_buff
 motorpositionx_AdLink = np.mean( np.array( metadata.get(motorpositions_directory + '/measurement/AdLinkAI_buff')), axis=0)
 motorpositionx_AdLink = np.trim_zeros(motorpositionx_AdLink)
-dx = (motorpositionx_AdLink[-1] - motorpositionx_AdLink[0])*1./ len(motorpositionx_AdLink)
+dx = (motorpositionx_AdLink[-1] - motorpositionx_AdLink[0])*1./ (len(motorpositionx_AdLink) -1 )
 
 # calc number of rows and cols that is used from measuremtn after realigning postions
 # for semgneted Nws you ned the -min,  ithink it is if you have both neg and pos values in your shift vector) Homogeneous NW dont need it
@@ -225,7 +223,7 @@ nbr_cols = len(motorpositionx_AdLink) - (np.max(p.scans.scan01.data.horizontal_s
 
 #        Nx = x_mean.shape[1] - (np.max(self.p.horizontal_shift) - np.min(self.p.horizontal_shift))  
 #        Ny = x_mean.shape[0] - (np.max(self.p.vertical_shift) - np.min(self.p.vertical_shift)) 
-extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
+extent_motorpos = [ 0, dx*(nbr_cols-1),0, dy*(nbr_rows-1)]
 # load and look at the probe and object
 #probe = P.probe.storages.values()[0].data[0]#remember, last index [0] is just for probe  
 #obj = P.obj.storages.values()[0].data
@@ -245,17 +243,24 @@ g = P.pods.values()[0].geometry
 
 # plot the sum of all used diffraction images
 plt.figure()
-plt.imshow((sum(sum(diff_data))),cmap='jet', interpolation='none')
+plt.imshow(np.log10(sum(sum(diff_data))),cmap='jet', interpolation='none')
 plt.title('Summed intensity ()')
 #plt.savefig("summed_intensity") 
 #movie_maker(np.log10(abs(probe)))
+#to check which axis is which I cur one of the detector images
+plt.figure()
+plt.title(' data matrix has indices \n diff_data[position,rotation,detector height,detector width]')
+plt.imshow(np.log10(np.sum(diff_data[:,0,200:500,0:500],axis=0)),cmap='jet')
+plt.ylabel('should be q1 accoring to Berenguer')
+plt.xlabel('should be q2')
+
 
 # plot the sum of all position for one rotations
 plot_rotation = len(scans)/2
 
 plt.figure()
-plt.imshow(sum(((diff_data[0:,plot_rotation]))),cmap='jet', interpolation='none')
-plt.title('Summed intensity for all rotations for scan %d (log)'%scans_sorted_theta[plot_rotation][1])
+plt.imshow(np.log10(sum(((diff_data[0:,plot_rotation])))), interpolation='none')
+plt.title('Summed intensity for all rotations for scan %d (log)'%scans_sorted_theta[plot_rotation][2])
 
 # ---------------------------------------------------------
 # Do bright field analysis
@@ -284,26 +289,64 @@ def plot_bright_field():
     for ii in range(0,len(scans),interval):
         plt.figure()
         plt.imshow(brightfield[ii], cmap='gray', interpolation='none', extent=extent_motorpos) 
-        plt.title('Bright field sorted in gonphi %d'%scans_sorted_theta[ii][1])  
-        plt.xlabel('x [$\mu m$]') 
-        plt.ylabel('y [$\mu m$]')
+        plt.title('Bright field sorted in gonphi %d'%scans_sorted_theta[ii][2])  
+        plt.xlabel('$x$ [$\mathrm{\mu m}$]') 
+        plt.ylabel('$y$ [$\mathrm{\mu m}$]') 
         #plt.savefig('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\ptycho_192_222\BF_Merlin_hor_ver_aligned\\scan%d'%((scans[ii])), bbox_inches='tight')
         #plt.savefig("BF/scan%d"%scans_gonphi[ii])   
     # plot average bright field image (average over rotation)
     plt.figure()
     plt.imshow(np.mean(brightfield, axis=0), cmap='jet', interpolation='none')#,extent=extent_motorpos)
     plt.title('Average image from bright field') 
-    #plt.xlabel('x [$\mu m$]') 
-    #plt.ylabel('y [$\mu m$]')
+    plt.xlabel('$x$ [$\mathrm{\mu m}$]') 
+    plt.ylabel('$y$ [$\mathrm{\mu m}$]') 
     #plt.savefig("BF/Average_brightfield")     
     
     plt.figure()
     plt.imshow(sum(brightfield), cmap='jet', interpolation='none',extent=extent_motorpos)
     plt.title('Bright field summed over all positions') 
-    plt.xlabel('x [$\mu m$]') 
-    plt.ylabel('y [$\mu m$]')
+    plt.xlabel('$x$ [$\mathrm{\mu m}$]') 
+    plt.ylabel('$y$ [$\mathrm{\mu m}$]') 
 plot_bright_field()
 
+
+#%%
+"""
+# Try to deconvolve the probe size from the BF signal (make a vertical line 
+# scan and deconvolve with square function of size 170 nm which should be the real diamter )
+# Have to make an interpolation of the signal for this to work
+# ----------------------------------------------------------------------------
+col_line = sum(brightfield)[:,33]
+xx_line = np.linspace(0, extent_motorpos[3],11)
+
+def box_function(x,limit1,limit2,low,high): 
+    func = high*np.ones((len(x)))
+    func[np.where(x <= limit1)] = low
+    func[np.where(x > limit2)] = low 
+    return func
+
+# wire diameter corresponds to this many pixels:
+NW_diam_pix = 0.170 /dy    
+
+limit1 = xx_line[int(len(xx_line)/2 - (np.round(NW_diam_pix) /2) )]
+limit2 = xx_line[int(len(xx_line)/2 + (np.round(NW_diam_pix)/2) )]
+boxfun = box_function(xx_line,limit1,limit2,0,col_line.max() )
+
+plt.figure()
+plt.plot(xx_line,boxfun,'b-')
+plt.plot(xx_line,col_line,'m.')
+plt.xlabel('um')
+
+
+
+#from scipy.signal import deconvolve
+#probe_signal = deconvolve(col_line,step)
+
+
+"""
+
+
+#%%
 # help function. Makes fast-check-plotting easier. 
 def imshow(data):
     plt.figure()
@@ -316,11 +359,12 @@ def def_q_vectors():
     global q3, q1, q2, q_abs    
     #  units of reciprocal meters [m-1]
     q_abs = 4 * np.pi / g.lam * g.sintheta
-    q3 = np.linspace(-g.dq3*g.shape[0]/2. , g.dq3*g.shape[0]/2., g.shape[0])    
+    # (x, z, y),  (r3, r1, r2), (qx, qz, qy), or (q3, q1, q2),
     q1 = np.linspace(-g.dq1*g.shape[1]/2.+q_abs/g.costheta, g.dq1*g.shape[1]/2.+q_abs/g.costheta, g.shape[1]) #        ~z
+    # q3 defined as centered around 0, that means adding the component from q1
+    q3 = np.linspace(-g.dq3*g.shape[0]/2. + g.sintheta*q1.min() , g.dq3*g.shape[0]/2.+ g.sintheta*q1.max(), g.shape[0]) #~x
     q2 = np.linspace(-g.dq2*g.shape[2]/2., g.dq2*g.shape[2]/2., g.shape[2]) #         ~y
 def_q_vectors()
-
 #%%
 
 # --------------------------------------------------------------
@@ -340,36 +384,64 @@ vilket storage har grid i reciproca rummet?
 2*np.pi/aa[0][9]
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 """
+
 # in the transformation is should be input and output: (qx, qz, qy), or (q3, q1, q2).
 # make q-vectors into a tuple to transform to the orthogonal system; Large Q means meshgrid, small means vector
-Q1,Q3,Q2 = np.meshgrid(q1, q3, q2) # NOTE when you make a mesh grid the first two axes are interchanged!!!! why???
+Q3,Q2,Q1 = np.meshgrid(q3, q2, q1, indexing='ij') 
 
-tup = Q3, Q1, Q2   
+plt.figure()
+
+plt.subplot(311)
+plt.imshow(Q1[1])
+plt.title('Q1')
+plt.colorbar()
+
+plt.subplot(312)
+plt.title('Q2')
+plt.imshow(Q2[1])
+plt.colorbar()
+
+plt.subplot(313)
+plt.title('Q3')
+plt.imshow(Q3[1])
+plt.colorbar()
+
+plt.figure()
+plt.title('Q3[:,:,0]')
+plt.imshow(Q3[:,:,0])
+plt.colorbar()
+
+
+tup = Q3, Q1, -Q2   
 Qx, Qz, Qy = g.transformed_grid(tup, input_space='reciprocal', input_system='natural')
 
+
+plt.figure()
+
+plt.subplot(311)
+plt.imshow(Qz[1])
+plt.title('Qz')
+plt.colorbar()
+
+plt.subplot(312)
+plt.title('Qy')
+plt.imshow(Qy[1])
+plt.colorbar()
+
+plt.subplot(313)
+plt.title('Qx')
+plt.imshow(Qx[1])
+plt.colorbar()
+
+#corrected
 qx = np.linspace(Qx.min(),Qx.max(),g.shape[0])
 qz = np.linspace(Qz.max(),Qz.min(),g.shape[1])
-qy = np.linspace(Qy.min(),Qy.max(),g.shape[2])
+qy = np.linspace(Qy[0,0,0],Qy[0,-1,0],g.shape[2])
 
 #-----------------------------------------------------------------------------    
 # Find max scattering position and plot that positions 3d bragg peak in 2d cuts 
-# using Berenguer terminology
+# using Berenguer terminology (It is not corrected and also I change the qx axis later!)
 # Plot the 'naive' Bragg peak (not skewed coordinates) in a single position in 
 # 3dim.
 # test trying to skew the system (the diff data) from the measurement coordinate system q3q1q2 (in reciprocal space)
@@ -380,6 +452,7 @@ qy = np.linspace(Qy.min(),Qy.max(),g.shape[2])
 # check which positions has the most intensity, for a nice 3d Bragg peak plot
 pos_vect_naive = np.sum(np.sum(np.sum(diff_data, axis =1), axis =1), axis =1)
 max_pos_naive = np.argmax(pos_vect_naive)
+#max_pos_naive = 524# 512for 80 segment#524 for 170 segment
 
 # find where the peak is in the detector plane
 q2max = np.argmax(np.sum(sum(diff_data[max_pos_naive]),axis=0))
@@ -388,66 +461,64 @@ q1max = np.argmax(np.sum(sum(diff_data[max_pos_naive]),axis=1))
 
 # save one bragg peak to plot. set 0 values to inf   
 plot_3d_naive = np.copy(diff_data[max_pos_naive])
-plot_3d_naive[plot_3d_naive==0] = np.inf
+#plot_3d_naive[plot_3d_naive==0] = np.inf
+
 # plot the 'naive' 3d peak of the most diffracting position, and centered on the peak for q1 and q2 
-factor = 1E-10  #if you want to plot in m or Angstroms, user 1 or 1E-10
+factor = 1E-10 
 plt.figure()
 plt.suptitle('Naive plot of single position Bragg peak in natural coord system')
 plt.subplot(221)
-plt.imshow(plot_3d_naive[g.shape[0]/2,:,:], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q2[0]*factor, q2[-1]*factor])
-plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
+# extent (left, right, bottom, top) in data coordinates
+plt.imshow(plot_3d_naive[len(scans)/2], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q2[-1]*factor, q2[0]*factor])
 plt.ylabel('$q_2$ $ (\AA ^{-1}$)') ; plt.colorbar()
-plt.subplot(222) # OBS FIRST AXIS IS Y
-plt.imshow(plot_3d_naive[:,q2max,:], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q3[0]*factor, q3[-1]*factor])
-plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
+plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   
+
+plt.subplot(222)
+plt.imshow(plot_3d_naive[:,q2max,:], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q3[-1]*factor, q3[0]*factor])
 plt.ylabel('$q_3$ $ (\AA ^{-1}$)'); plt.colorbar()
+plt.xlabel('$q_1$ $ (\AA ^{-1}$)') 
 plt.subplot(223)
-plt.imshow(plot_3d_naive[:,:,q1max], cmap='jet', interpolation='none', extent=[q2[0]*factor, q2[-1]*factor, q3[0]*factor, q3[-1]*factor])
-plt.xlabel('$q_2$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
-plt.ylabel('$q_3$ $ (\AA ^{-1}$)'); plt.colorbar()
+plt.imshow(plot_3d_naive[:,:,q1max], cmap='jet', interpolation='none', extent=[q2[0]*factor, q2[-1]*factor, q3[-1]*factor, q3[0]*factor])
+plt.ylabel('$q_3$ $ (\AA ^{-1}$)'); plt.colorbar() 
+plt.xlabel('$q_2$ $ (\AA ^{-1}$)') 
 
 
-plot_3d_naive[plot_3d_naive==np.inf] = 0
-plt.figure()
-plt.title('fft back to real space')
-plt.imshow(abs(np.fft.fftshift(np.fft.fft2(plot_3d_naive[:,:,q1max]))))
 
-plt.figure()
-plt.title('Bragg peak summed over rotation axis q3')
-plt.imshow(np.log10(np.sum(diff_data[max_pos_naive],axis=0)), interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q2[0]*factor, q2[-1]*factor])
-plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   #l(' [$\mu m$]')#
-plt.ylabel('$q_2$ $ (\AA ^{-1}$)') ; plt.colorbar()
 #TODO make a copy of the data instead of putting into diff storage. but it must be a ptypy storage as input in coordinate_shift.
 # here I put the masked data in the data. for all frames. So this I need to keep before xrd analysis. (or make a new storage with masked data) 
 P.diff.storages.values()[0].data = P.diff.storages.values()[0].data * P.mask.storages.values()[0].data
 
+
 test_shift_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.diff.storages.values()[0], input_space='reciprocal',
                          input_system='natural', keep_dims=True,
                          layer=max_pos_naive)
-# check if the data look good and is masked
-plt.figure()
-plt.imshow(np.log10(sum(test_shift_coord.data[0])))
-plt.title('Check if there are hot pixels in here');  plt.colorbar()
 
 # make 0 values white instead of colored
+# TODO : make a scatter plot instead tp check that all axis are correct, make it more visible. 
+#but remember that the data is fluipped in qx(rot)axis here
 
-test_shift_coord.data[0][test_shift_coord.data[0]==0] = np.inf    
+#test_shift_coord.data[0][test_shift_coord.data[0]==0] = np.inf    
 factor = 1E-10  #if you want to plot in reciprocal m or Angstroms, user 1 or 1E-10
 plt.figure()
-plt.suptitle('Single position Bragg peak in orthogonal system (Berenguer terminology) qxqzqy')
+plt.suptitle('Single position Bragg peak in orthogonal system \n (Berenguer terminology) qxqzqy')
 plt.subplot(221)
-plt.imshow(test_shift_coord.data[0][g.shape[0]/2,:,:], cmap='jet', interpolation='none', extent=[qz[0]*factor, qz[-1]*factor, qy[0]*factor, qy[-1]*factor])
-plt.xlabel('$q_z$ $ (\AA ^{-1}$)')   
+plt.imshow(test_shift_coord.data[0][len(scans)/2], cmap='jet', interpolation='none', extent=[qz[0]*factor, qz[-1]*factor, qy[-1]*factor, qy[0]*factor])
 plt.ylabel('$q_y$ $ (\AA ^{-1}$)');  plt.colorbar()
-plt.subplot(222)
-plt.imshow(test_shift_coord.data[0][:,q2max,:], cmap='jet', interpolation='none', extent=[qz[0]*factor, qz[-1]*factor, qx[0]*factor, qx[-1]*factor])
 plt.xlabel('$q_z$ $ (\AA ^{-1}$)')   
+
+plt.subplot(222)
+# should be x angainst y in these labels
+plt.imshow(test_shift_coord.data[0][:,q2max,:], cmap='jet', interpolation='none', extent=[qz[0]*factor, qz[-1]*factor, qx[-1]*factor, qx[0]*factor])
 plt.ylabel('$q_x$ $ (\AA ^{-1}$)'); plt.colorbar()
+plt.xlabel('$q_z$ $ (\AA ^{-1}$)')   
+
 plt.subplot(223)
-plt.imshow(test_shift_coord.data[0][:,:,q1max], cmap='jet', interpolation='none', extent=[qy[0]*factor, qy[-1]*factor, qx[0]*factor, qx[-1]*factor])
-plt.xlabel('$q_y$ $ (\AA ^{-1}$)') 
+plt.imshow(test_shift_coord.data[0][:,:,q1max], cmap='jet', interpolation='none', extent=[qy[0]*factor, qy[-1]*factor, qx[-1]*factor, qx[0]*factor])
 plt.ylabel('$q_x$ $ (\AA ^{-1}$)'); plt.colorbar()
- 
+plt.xlabel('$q_y$ $ (\AA ^{-1}$)') 
+
+# x,y,z    # så jag har det
+#3,2,1
 
 ###############################################################################
 # XRD analysis
@@ -463,8 +534,8 @@ def COM_voxels_reciproc(data, vect_Qx, vect_Qz, vect_Qy ):
     COM_qz = np.sum(data* vect_Qz)/np.sum(data)
     COM_qy = np.sum(data* vect_Qy)/np.sum(data)
 
-    print 'coordinates in reciprocal space:'
-    print COM_qx, COM_qz, COM_qy
+   # print 'coordinates in reciprocal space:'
+   # print COM_qx, COM_qz, COM_qy
     return COM_qx, COM_qz, COM_qy
 
 # loop through all scanning postitions and move the 3D Bragg peak from the 
@@ -484,9 +555,15 @@ def XRD_analysis():
                          input_system='natural', keep_dims=True,
                          layer=position_idx)         # layer is the first col in P.diff.storages.values()[0]
       
+            
+            # TEST do analysis on the unshifted data. unshifted 
+            #COM_qx, COM_qz, COM_qy = COM_voxels_reciproc(P.diff.storages.values()[0].data[position_idx,::-1,:,:], Q3, Q1, Q2)
+        
+            
             # do the 3d COM analysis to find the orthogonal reciprocal space coordinates of each Bragg peak
-            #TODO FEl på x y z på det som kommer ut. cant see that its wrong now. 
-            COM_qx, COM_qz, COM_qy = COM_voxels_reciproc(data_orth_coord.data[0], Qx, Qz, Qy)
+            # IMPORTATNE rotations are sorted with gonphi but for this to be correct with the coordinate system the 
+            # data should sorted with higher index = higher theta that why I fli the order here. The plots before are not correct
+            COM_qx, COM_qz, COM_qy = COM_voxels_reciproc(data_orth_coord.data[0][::-1,:,:], Qx, Qz, Qy)
 
             # insert coordinate in reciprocal space maps 
             XRD_qx[row,col] = COM_qx
@@ -496,7 +573,7 @@ def XRD_analysis():
             position_idx +=1
         
             #plot every other 3d peak and print out the postion of the COM analysis
-            if (position_idx%100==0):
+            if (position_idx%500==0):
                 # TODO very har to say anything about this looking in 2d, need 3d plots!
                
                 x_p = np.argwhere(qx>COM_qx)[0][0]
@@ -504,10 +581,11 @@ def XRD_analysis():
                 z_p = np.argwhere(qz>COM_qz)[0][0]  
 #                import pdb; pdb.set_trace()
                 plt.figure()
+                plt.title('COM_qz = %d, COM_qy = %d \n positions indx:%d '%((COM_qz,COM_qy,position_idx-1)))
                 plt.imshow(sum(data_orth_coord.data[0]), cmap='jet')#, extent=[ qy[0], qy[-1], qz[0], qz[-1] ])
                 # Find the coordinates of that cell closest to this value:              
                 plt.scatter(y_p, z_p, s=500, c='red', marker='x')#, extent=[ qy[0], qy[-1], qz[0], qz[-1] ])
-                plt.title('Single Bragg peak summed in x. COM z and y found approx at red X')
+                #plt.title('Single Bragg peak summed in x. COM z and y found approx at red X')
 #                import pdb
 #                pdb.set_trace()    
 
@@ -587,7 +665,7 @@ extent_motorpos_cut = np.copy(extent_motorpos)
 
 # create a mask from the BF matrix, for the RSM analysis
 XRD_mask = np.copy(sum(brightfield))
-XRD_mask[XRD_mask < 40000 ] = np.nan   #81000   # for homo InP, use 280000
+XRD_mask[XRD_mask < 25000 ] = np.nan #inP 25000  #ingap?42000 81000   # for homo InP, use 280000
 XRD_mask[XRD_mask > 0] = 1       #make binary, all values not none to 1
 
 # plot abs q to select pixels that are 'background', not on wire, and set these pixels to NaN (make them white)
@@ -595,8 +673,8 @@ plt.figure()
 #plt.suptitle(
 plt.subplot(411)
 plt.title('Summed up intensity (bright field)') #sum of all rotations
-plt.imshow(XRD_mask[:,start_cutXat:cutXat]*sum(brightfield[:,:,0:])/sum(brightfield).max(), cmap='jet', interpolation='none',extent=extent_motorpos)
-plt.ylabel('y [$\mu m$]')
+plt.imshow(sum(brightfield[:,:,0:])/sum(brightfield).max(), cmap='jet', interpolation='none',extent=extent_motorpos)
+plt.ylabel('$y$ [$\mathrm{\mu}$m]')
 #po = plt.colorbar(ticks=(10,20,30,40))#,fraction=0.046, pad=0.04) 
 plt.colorbar()
 
@@ -622,33 +700,29 @@ plt.imshow(100*XRD_mask[:,start_cutXat:cutXat]*(a_lattice_exp[:,start_cutXat:cut
 #plt.title('Relative length of Q-vector |Q|-$Q_{mean}$ $(10^{-3}/\AA$)')
 plt.title('Strain $\epsilon$ (%)')
 #plt.title('Lattice constant a')
-plt.ylabel('y [$\mu m$]');plt.colorbar()   
+plt.ylabel('$y$ [$\mathrm{\mu}$m]');plt.colorbar()   
 
 plt.subplot(413)
-plt.imshow(XRD_mask[:,start_cutXat:cutXat]*1E3*XRD_alpha[:,start_cutXat:cutXat], cmap='jet',interpolation='none',extent=extent_motorpos_cut) # not correct!
+plt.imshow(XRD_mask[:,start_cutXat:cutXat]*1E3*XRD_alpha[:,start_cutXat:cutXat], cmap='jet',interpolation='none')#,extent=extent_motorpos_cut) # not correct!
 # cut in extent_motorposition. x-pixel nbr 67 is at 2.0194197798363955
-plt.title('$\\alpha$ ($mrad$)')
-plt.ylabel('y [$\mu m$]')
+plt.title('$\\alpha$ (mrad)')
+plt.ylabel('$y$ [$\mathrm{\mu}$m]')
 po = plt.colorbar()
 #po = plt.colorbar(ticks=(0,1,2,3,4))
 #po.set_label('Bending around $q_x$ $\degree$')
    
 plt.subplot(414)
 plt.imshow(XRD_mask[:,start_cutXat:cutXat]*1E3*XRD_beta[:,start_cutXat:cutXat], cmap='jet',interpolation='none',extent=extent_motorpos_cut) # not correct!
-plt.title('$\\beta$ ($mrad$)')
-plt.ylabel('y [$\mu m$]')
-plt.xlabel('x [$\mu m$]') 
+plt.title('$\\beta$ (mrad)')
+plt.ylabel('$y$ [$\mathrm{\mu}$m]')
+plt.xlabel('$x$ [$\mathrm{\mu m}$]') 
 po = plt.colorbar()
 #po = plt.colorbar(ticks=(5, 10, 15 ))
 #po.set_label('Bending around $q_y$ $\degree$')
 #plot_XRD_polar()
 
 
-plt.figure()
-plt.imshow(a_lattice_exp[:,start_cutXat:cutXat], cmap='jet',interpolation='none',extent=extent_motorpos) 
-plt.ylabel('y [$\mu m$]')
-po = plt.colorbar()
-po.set_label('a or $d_{hkl}$')
+
 #%%
 
 def XRD_lineplot():
@@ -695,147 +769,148 @@ def rocking_curve_plot():
     
     plt.ylabel('Photon counts');plt.xlabel('Rotation $\Theta$ ($\degree$)')
     plt.grid(True)
-rocking_curve_plot()
+#rocking_curve_plot()
  
-    
-###############################################################################
-# Testing a few Mayavi plotting functions
-###############################################################################    
-#def plot_3d_isosurface():
-from mayavi import mlab   #if you can do this instde function it is ood because it changes to QT fram    
-
-# check which positions has the most intensity, for a nice 3d Bragg peak plot
-#TODO this is for the 'naive' system (diff_data is)
-pos_vect = np.sum(np.sum(np.sum(diff_data, axis =1), axis =1), axis =1)
-max_pos = np.argmax(pos_vect)
-
-plt.figure()
-plt.text(5, np.max(pos_vect), 'Max at: ' + str(max_pos), fontdict=None, withdash=False)
-plt.plot(pos_vect)
-plt.title('Summed intensity as a function of position')
-#plt.savefig('SumI_vs_position')
-
-plt.figure()
-plt.imshow(diff_data[max_pos,5], cmap='jet')
-plt.title('InP Bragg peak projection')
-
-
-# plot this position:
-pos = max_pos +0
-# change the coordinate system of this data
-data_orth_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.diff.storages.values()[0], input_space='reciprocal',
-                         input_system='natural', keep_dims=True,
-                         layer=pos) 
-# check to see it is fine
-
-plt.figure()
-plt.imshow(data_orth_coord.data[0,0])
-plt.title('InP Bragg peak projection with fringes, orth coord')
-
-plot_data = diff_data[pos] #data_orth_coord.data[0]     #data[0]0
-
-
-def slice_plot():
-    mlab.pipeline.image_plane_widget(mlab.pipeline.scalar_field(plot_data),
-                                plane_orientation='x_axes',
-                                slice_index=10,
-                            )
-    mlab.pipeline.image_plane_widget(mlab.pipeline.scalar_field(plot_data),
-                                plane_orientation='y_axes',
-                                slice_index=10,
-                            )
-    mlab.outline()
-
-def plot3dvolume(): #  this looks very good, but almost never works 
-    x, y, z = np.ogrid[-10:10:20j, -10:10:20j, -10:10:20j]
-    s = np.sin(x*y*z)/(x*y*z)
-    mlab.pipeline.volume(mlab.pipeline.scalar_field(s))
-    # pipeline.scalar_filed makes data on a regular grid
-    #mlab.pipeline.volume(data[max_pos], vmin=0, vmax=0.8)
-#plot3dvolume()
-
-# TODO axes must be wrong here. check
-#def contour3d():   #iso surface
-mlab.figure()
-xmin=qx[0]*1E0; xmax = qx[-1]*1E0; ymin=qy[0]*1E0; ymax=qy[-1]*1E0; zmin=qz[0]*1E0; zmax=qz[-1]*1E0
-obj = mlab.contour3d( plot_data, contours=10, opacity=0.5, transparent=False, extent=[ qz[0], qz[-1],qy[0], qy[-1] , qx[0], qx[-1] ])  #  , vmin=0, vmax=0.8)
-mlab.axes(ranges=[xmin, xmax, ymin, ymax, zmin, zmax])
-mlab.xlabel('$Q_z$ [$\AA^{-1}$]'); mlab.ylabel('$Q_y$ [$\AA^{-1}$]'); mlab.zlabel('$Q_z$ [$\AA^{-1}$]')
-#C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\scan461_\bragg_peak_stacking\InP\
-#mlab.savefig('pos_'+ str(pos) +'.jpg')
-
-
-# Another way to maka an iso surface. Can also be combined with cut planes
-position = 0 
-def iso_pipeline_plot():
-    src = mlab.pipeline.scalar_field(plot_data)  # this creates a regular space data
-    mlab.pipeline.iso_surface(src, contours=[diff_data[position].min()+0.1*diff_data[position].ptp(), ], opacity=0.5)
-    mlab.show()    
-iso_pipeline_plot()
-
- 
-###############################################################################
-# MOVIE makers
-###############################################################################
-
-# calls a movie maker function in another script
-movie_maker(abs((diff_data[:,13])),'all_poitions_S192') 
-
-# alternative movie maker. 
-def movie_maker2(data, name, rotation_nbr, nbr_plots):
-    if nbr_plots == 1:
-        #figure for animation
-        fig = plt.figure()
-        # Initialize vector for animation data
-        ims = []  
-        index = 0
-        for ii in range(0,len(data)):
-
-                
-                im = plt.imshow(np.log10(data[index][rotation_nbr]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
-    #        #plt.clim(0,4) to change range of colorbar
-    #        im = plt.title('Col %d'%i)    # does not work for movies
-    #        txt = plt.text(0.2,0.8,i)   # (x,y,string)
-                ims.append([im])    #ims.append([im, txt])
-        ani = animation.ArtistAnimation(fig, ims, interval=2000, blit=True,repeat_delay=0)  
-        #txt = plt.text(0.1,0.8,'row: ' + str(y) + ' col: ' + str(x) )  # (x,y,string)
-        ims.append([im])
-        #ims.append([[im],txt])
-        plt.axis('off')
-        plt.show()
-        # save animation:
-        ani.save(name +'.mp4', writer="mencoder") 
-    elif nbr_plots == 2:           
-        fig, (ax1, ax2)   = plt.subplots(2,1)  
-        ims = [] 
-        # for x and y index of 1 col
-        #index = 0
-        for index in range(5,5+21):
-            #for x in range(20,50):
-    #            im = plt.imshow(np.log10(data[index]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
-                #plt..subplot(21)
-                im = ax1.imshow(np.log10(data[index][rotation_nbr]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
-                #plt.subplot(22)
-                im2 = ax2.imshow(np.log10(data[index][rotation_nbr]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
-                #plt.subplot(313)
-                #im3 = plt.imshow(np.log10(data[index])[2], animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
-                index += 1
-                #plt.clim(0,4) to change range of colorbar
-                #im = plt.title('Angle %d'%i)    # does not work for movies
-     #           txt = plt.text(0.1,0.8,'row: ' + str(y) + ' col: ' + str(x) )  # (x,y,string)
-                #ims.append([[im, im2],txt])
-                ims.append([im, im2])           
-                
-        ani = animation.ArtistAnimation(fig, ims, interval=500, blit=True,repeat_delay=0)  
-        plt.axis('on')
-        plt.show()
-        # save animation:
-        #ani.save(name +'.mp4', writer="mencoder")    
-movie_maker2(diff_data,'all_diff_data_S192',rotation_nbr=13, nbr_plots=1)
-# TODO read out scan number from scans_sorted_theta
-
-plt.figure()
-plt.imshow(np.log10(diff_data[147][13]), cmap = 'jet', interpolation = 'none')#, origin='lower')
-
-
-
+#    
+################################################################################
+## Testing a few Mayavi plotting functions
+################################################################################    
+##def plot_3d_isosurface():
+#from mayavi import mlab   #if you can do this instde function it is ood because it changes to QT fram    
+#
+## check which positions has the most intensity, for a nice 3d Bragg peak plot
+##TODO this is for the 'naive' system (diff_data is)
+#pos_vect = np.sum(np.sum(np.sum(diff_data, axis =1), axis =1), axis =1)
+#max_pos = np.argmax(pos_vect)
+#
+#plt.figure()
+#plt.text(5, np.max(pos_vect), 'Max at: ' + str(max_pos), fontdict=None, withdash=False)
+#plt.plot(pos_vect)
+#plt.title('Summed intensity as a function of position')
+##plt.savefig('SumI_vs_position')
+#
+#plt.figure()
+#plt.imshow(diff_data[max_pos,5], cmap='jet')
+#plt.title('InP Bragg peak projection')
+#
+#
+## plot this position:
+#pos = max_pos +0
+## change the coordinate system of this data
+#data_orth_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.diff.storages.values()[0], input_space='reciprocal',
+#                         input_system='natural', keep_dims=True,
+#                         layer=pos) 
+## check to see it is fine
+#
+#plt.figure()
+#plt.imshow(data_orth_coord.data[0,0])
+#plt.title('InP Bragg peak projection with fringes, orth coord')
+#
+#plot_data = diff_data[pos] #data_orth_coord.data[0]     #data[0]0
+#
+#
+#def slice_plot():
+#    mlab.pipeline.image_plane_widget(mlab.pipeline.scalar_field(plot_data),
+#                                plane_orientation='x_axes',
+#                                slice_index=10,
+#                            )
+#    mlab.pipeline.image_plane_widget(mlab.pipeline.scalar_field(plot_data),
+#                                plane_orientation='y_axes',
+#                                slice_index=10,
+#                            )
+#    mlab.outline()
+#    
+#slice_plot()
+#
+#def plot3dvolume(): #  this looks very good, but almost never works 
+#    x, y, z = np.ogrid[-10:10:20j, -10:10:20j, -10:10:20j]
+#    s = np.sin(x*y*z)/(x*y*z)
+#    mlab.pipeline.volume(mlab.pipeline.scalar_field(s))
+#    # pipeline.scalar_filed makes data on a regular grid
+#    #mlab.pipeline.volume(data[max_pos], vmin=0, vmax=0.8)
+##plot3dvolume()
+#
+## TODO axes must be wrong here. check
+##def contour3d():   #iso surface
+#mlab.figure()
+#xmin=qx[0]*1E0; xmax = qx[-1]*1E0; ymin=qy[0]*1E0; ymax=qy[-1]*1E0; zmin=qz[0]*1E0; zmax=qz[-1]*1E0
+#obj = mlab.contour3d( plot_data, contours=10, opacity=0.5, transparent=False, extent=[ qz[0], qz[-1],qy[0], qy[-1] , qx[0], qx[-1] ])  #  , vmin=0, vmax=0.8)
+#mlab.axes(ranges=[xmin, xmax, ymin, ymax, zmin, zmax])
+#mlab.xlabel('$Q_z$ [$\AA^{-1}$]'); mlab.ylabel('$Q_y$ [$\AA^{-1}$]'); mlab.zlabel('$Q_z$ [$\AA^{-1}$]')
+##C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\scan461_\bragg_peak_stacking\InP\
+##mlab.savefig('pos_'+ str(pos) +'.jpg')
+#
+#
+## Another way to maka an iso surface. Can also be combined with cut planes
+#position = 0 
+#def iso_pipeline_plot():
+#    src = mlab.pipeline.scalar_field(np.log10(plot_data))  # this creates a regular space data
+#    mlab.pipeline.iso_surface(src, contours=[diff_data[position].min()+0.1*diff_data[position].ptp(), ], opacity=0.5)
+#    mlab.show()    
+#iso_pipeline_plot()
+#
+# 
+################################################################################
+## MOVIE makers
+################################################################################
+#
+## calls a movie maker function in another script
+#movie_maker(abs((diff_data[:,13])),'all_poitions_S192') 
+#
+## alternative movie maker. 
+#def movie_maker2(data, name, rotation_nbr, nbr_plots):
+#    if nbr_plots == 1:
+#        #figure for animation
+#        fig = plt.figure()
+#        # Initialize vector for animation data
+#        ims = []  
+#        index = 0
+#        for ii in range(0,len(data)):
+#
+#                
+#                im = plt.imshow(np.log10(data[index][rotation_nbr]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
+#    #        #plt.clim(0,4) to change range of colorbar
+#    #        im = plt.title('Col %d'%i)    # does not work for movies
+#    #        txt = plt.text(0.2,0.8,i)   # (x,y,string)
+#                ims.append([im])    #ims.append([im, txt])
+#        ani = animation.ArtistAnimation(fig, ims, interval=2000, blit=True,repeat_delay=0)  
+#        #txt = plt.text(0.1,0.8,'row: ' + str(y) + ' col: ' + str(x) )  # (x,y,string)
+#        ims.append([im])
+#        #ims.append([[im],txt])
+#        plt.axis('off')
+#        plt.show()
+#        # save animation:
+#        ani.save(name +'.mp4', writer="mencoder") 
+#    elif nbr_plots == 2:           
+#        fig, (ax1, ax2)   = plt.subplots(2,1)  
+#        ims = [] 
+#        # for x and y index of 1 col
+#        #index = 0
+#        for index in range(5,5+21):
+#            #for x in range(20,50):
+#    #            im = plt.imshow(np.log10(data[index]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
+#                #plt..subplot(21)
+#                im = ax1.imshow(np.log10(data[index][rotation_nbr]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
+#                #plt.subplot(22)
+#                im2 = ax2.imshow(np.log10(data[index][rotation_nbr]), animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
+#                #plt.subplot(313)
+#                #im3 = plt.imshow(np.log10(data[index])[2], animated=True, cmap = 'jet', interpolation = 'none')#, origin='lower')
+#                index += 1
+#                #plt.clim(0,4) to change range of colorbar
+#                #im = plt.title('Angle %d'%i)    # does not work for movies
+#     #           txt = plt.text(0.1,0.8,'row: ' + str(y) + ' col: ' + str(x) )  # (x,y,string)
+#                #ims.append([[im, im2],txt])
+#                ims.append([im, im2])           
+#                
+#        ani = animation.ArtistAnimation(fig, ims, interval=500, blit=True,repeat_delay=0)  
+#        plt.axis('on')
+#        plt.show()
+#        # save animation:
+#        #ani.save(name +'.mp4', writer="mencoder")    
+#movie_maker2(diff_data,'all_diff_data_S192',rotation_nbr=13, nbr_plots=1)
+#
+#plt.figure()
+#plt.imshow(np.log10(diff_data[147][13]), cmap = 'jet', interpolation = 'none')#, origin='lower')
+#
+#
+#

@@ -86,6 +86,8 @@ def XRD_fun(P, scans, shape):
       #TODO
       #TODO
       Qx,Qz,Qy = np.meshgrid(vect1,vect3,vect2)
+      # do it this was:
+      #Q3,Q2,Q1 = np.meshgrid(q3, q2, q1, indexing='ij') 
       
       COM_x = sum(sum(sum(data* Qx)))/sum(sum(sum(data)))
       COM_y = sum(sum(sum(data* Qy)))/sum(sum(sum(data)))

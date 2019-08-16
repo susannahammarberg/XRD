@@ -71,9 +71,16 @@ p.scans.scan01.data.maskfile = 'C:/Users/Sanna/Documents/Beamtime/NanoMAX062017/
 p.scans.scan01.data.scans = scans
 p.scans.scan01.data.theta_bragg = 11.0  # calibrated for homogeneous wires to 11.0
 
-p.scans.scan01.data.shape = 150
-p.scans.scan01.data.auto_center = False 
-p.scans.scan01.data.center = (200,270) #y than x #if none ptypy calculates the center based on the first pic 
+raw_center = (190,190) # for InP in segmented NWs
+p.scans.scan01.data.shape = 150#150    #256 for homogeneous# needs to be an EVEN number for using shifting
+p.scans.scan01.data.auto_center = False # 
+# ptypy says: Setting center for ROI from None to [ 75.60081158  86.26238307].   but that must be in the images that iI cut out from the detector
+detind0 = raw_center[0] - p.scans.scan01.data.shape/2
+detind1 = raw_center[0] + p.scans.scan01.data.shape/2
+detind2 = raw_center[1] - p.scans.scan01.data.shape/2
+detind3 = raw_center[1] + p.scans.scan01.data.shape/2
+p.scans.scan01.data.detector_roi_indices = [detind0,detind1,detind2,detind3]  # this one should not be needed since u have shape and center...
+p.scans.scan01.data.center = (raw_center[0] - detind0,raw_center[1] - detind2)
 
 #p.scans.scan01.data.load_parallel = 'all'
 p.scans.scan01.data.psize = 55e-6
@@ -145,9 +152,8 @@ metadata = h5py.File( metadata_directory ,'r')
 motorpositions_directory = '/entry%s' %scan_name_string  
 
 # gonphi is the rotation of the rotatation stage on which all motors samx/y/z and samsx/y/z and sample rests on.
-# when gonphi is orthoganoal to the incoming beam, it is equal to 180. Therfore, 
-# get the list of scans numbers and theta (read from gonphi)
-#todo is this correct for segmenter nw 
+# when gonphi is orthoganoal to the incoming beam, it is equal to 180. Read in gonphi and 
+# get the list of scans numbers and theta (=180-gonphi) and gonphi
 def sort_scans_after_theta():
     gonphi_list = []
     # read in all gonphi postins
@@ -163,12 +169,9 @@ def sort_scans_after_theta():
     # order the scan list after gonphi
     # first put them together
     theta_array = 180 - np.array(gonphi_list)
-    zipped = zip(theta_array,scans)
-    # then sort after the first col
+    zipped = zip(gonphi_list,theta_array,scans)
+    # then sort after the first col (gonphi)
     zipped.sort()
-    # Now, because gonphi is gonphi = 180 - theta, and the data is sorted with higher gonphi,
-    # for this list to correspond to how the data is sorted in diffdata, this list should be reversed
-    zipped = np.flipud(zipped)
     return zipped
 scans_sorted_theta = sort_scans_after_theta()  
       
@@ -176,17 +179,17 @@ scans_sorted_theta = sort_scans_after_theta()
 # calculate mean value of dy
 # positive samy movement moves sample positive in y (which means the beam moves Down on the sample)
 motorpositiony = np.array(metadata.get(motorpositions_directory + '/measurement/samy'))
-dy = (motorpositiony[-1] - motorpositiony[0])*1./len(motorpositiony)
+dy = (motorpositiony[-1] - motorpositiony[0])*1./ (len(motorpositiony)-1)
 
 # calculate mean value of dx
 # instead of samx, you find the motorposition in flysca ns from 'adlink_buff' # obs a row of zeros after values in adlinkAI_buff
 motorpositionx_AdLink = np.mean( np.array( metadata.get(motorpositions_directory + '/measurement/AdLinkAI_buff')), axis=0)
 motorpositionx_AdLink = np.trim_zeros(motorpositionx_AdLink)
-dx = (motorpositionx_AdLink[-1] - motorpositionx_AdLink[0])*1./ len(motorpositionx_AdLink)
+dx = (motorpositionx_AdLink[-1] - motorpositionx_AdLink[0])*1./ (len(motorpositionx_AdLink)-1)
 
 nbr_rows = len(motorpositiony)
 nbr_cols = len(motorpositionx_AdLink)
-extent_motorpos = [ 0, dx*nbr_cols,0, dy*nbr_rows]
+extent_motorpos = [ 0, dx*(nbr_cols-1),0, dy*(nbr_rows-1)]
 
 # load and look at the probe and object
 #probe = P.probe.storages.values()[0].data[0]#remember, last index [0] is just for probe  
@@ -274,8 +277,10 @@ def def_q_vectors():
     global q3, q1, q2, q_abs    
     #  units of reciprocal meters [m-1]
     q_abs = 4 * np.pi / g.lam * g.sintheta
-    q3 = np.linspace(-g.dq3*g.shape[0]/2. , g.dq3*g.shape[0]/2., g.shape[0])    
+       
     q1 = np.linspace(-g.dq1*g.shape[1]/2.+q_abs/g.costheta, g.dq1*g.shape[1]/2.+q_abs/g.costheta, g.shape[1]) #        ~z
+    # q3 defined as centered around 0, that means adding the component from q1
+    q3 = np.linspace(-g.dq3*g.shape[0]/2. + g.sintheta*q1.min() , g.dq3*g.shape[0]/2.+ g.sintheta*q1.max(), g.shape[0])        
     q2 = np.linspace(-g.dq2*g.shape[2]/2., g.dq2*g.shape[2]/2., g.shape[2]) #         ~y
 def_q_vectors()
 
@@ -286,9 +291,9 @@ def_q_vectors()
 
 # in the transformation is should be input and output: (qx, qz, qy), or (q3, q1, q2).
 # make q-vectors into a tuple to transform to the orthogonal system; Large Q means meshgrid, small means vector
-Q1,Q3,Q2 = np.meshgrid(q1, q3, q2) # NOTE when you make a mesh grid the first two axes are interchanged!!!! why???
+Q3,Q2,Q1 = np.meshgrid(q3, q2, q1, indexing='ij') 
 
-tup = Q3, Q1, Q2   
+tup = Q3, Q1, -Q2   
 Qx, Qz, Qy = g.transformed_grid(tup, input_space='reciprocal', input_system='natural')
 # NOTE Q2-Qy should not have changed but the other ones should. note 2, Q3 and Qx should be much larger (never negative).
 qx = np.linspace(Qx.min(),Qx.max(),g.shape[0])
