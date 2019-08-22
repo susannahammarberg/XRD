@@ -43,7 +43,7 @@ p.run = 'XRD_29A_inP_realprobe'   # 'XRD_InP'
 
 #sample = 'JWX33_NW2'; scans = range(192, 200+1)+range(205, 222+1) #range(192, 195)# 
 #sample = 'JWX29A_NW1'; scans = [483,484,485] # ~~central rotations
-sample = 'JWX29A_NW1'; scans = [458,459,460,461,462,463,464,465,466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
+sample = 'JWX29A_NW1'; scans = [458,459,460,461,462]#,463,464,465,466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
 # obs temp list
 ###sample = 'JWX29A_NW1'; scans = [470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500]
 p.data_type = "single"   #or "double"
@@ -77,14 +77,17 @@ p.scans.scan01.data.theta_bragg = 11.0  # calibrated for homogeneous wires to 11
 #raw_center = (190,330) #  for InGaP in segmented NWs
 raw_center = (190,190) # for InP in segmented NWs
 #raw_center = (256,256)
-# 180
-p.scans.scan01.data.shape = 150    #256 for homogeneous# needs to be an EVEN number for using shifting
+# does not work with asymmetric
+p.scans.scan01.data.shape = (150,150)    #256 for homogeneous# needs to be an EVEN number for using shifting
 p.scans.scan01.data.auto_center = False # 
+#TODO: fix orientation. should be 4 (transpose) and maybe som flippin flippin
+p.scans.scan01.data.orientation = None# 4
+
 # ptypy says: Setting center for ROI from None to [ 75.60081158  86.26238307].   but that must be in the images that iI cut out from the detector
-detind0 = raw_center[0] - p.scans.scan01.data.shape/2
-detind1 = raw_center[0] + p.scans.scan01.data.shape/2
-detind2 = raw_center[1] - p.scans.scan01.data.shape/2
-detind3 = raw_center[1] + p.scans.scan01.data.shape/2
+detind0 = raw_center[0] - p.scans.scan01.data.shape[0]/2
+detind1 = raw_center[0] + p.scans.scan01.data.shape[0]/2
+detind2 = raw_center[1] - p.scans.scan01.data.shape[1]/2
+detind3 = raw_center[1] + p.scans.scan01.data.shape[1]/2
 p.scans.scan01.data.detector_roi_indices = [detind0,detind1,detind2,detind3]  # this one should not be needed since u have shape and center...
 p.scans.scan01.data.center = (raw_center[0] - detind0,raw_center[1] - detind2) # (200,270) #(512-170,245)     #(512-170,245) for 192_   #Seems like its y than x
 # tprev used:  [275,425,150,300]
@@ -229,7 +232,8 @@ extent_motorpos = [ 0, dx*(nbr_cols-1),0, dy*(nbr_rows-1)]
 #obj = P.obj.storages.values()[0].data
 # save masked diffraction patterns
 # in diff data the rotations are sorted according to gonphi, starting with the LOWEST GONPHI which is the reversed of theta. Hence, diff_data[0] is is theta=12.16 and scan=222 
-diff_data = P.diff.storages.values()[0].data*P.mask.storages.values()[0].data[0]#        (storage_data[:,scan_COM,:,:])
+"                342433243222"
+diff_data = P.diff.storages.values()[0].data[:,:,40:100]*P.mask.storages.values()[0].data[0][:,40:100]
 # or load a single pod P.pods['P0896'].diff
 #access the grid of the diff storage
 #TODO
@@ -434,10 +438,10 @@ plt.title('Qx')
 plt.imshow(Qx[1])
 plt.colorbar()
 
-#corrected
+#corrected?
 qx = np.linspace(Qx.min(),Qx.max(),g.shape[0])
-qz = np.linspace(Qz.max(),Qz.min(),g.shape[1])
-qy = np.linspace(Qy[0,0,0],Qy[0,-1,0],g.shape[2])
+qz = np.linspace(Qz.max(),Qz.min(),g.shape[2])
+qy = np.linspace(Qy[0,0,0],Qy[0,-1,0],g.shape[1])
 
 #-----------------------------------------------------------------------------    
 # Find max scattering position and plot that positions 3d bragg peak in 2d cuts 
@@ -486,7 +490,9 @@ plt.xlabel('$q_2$ $ (\AA ^{-1}$)')
 
 #TODO make a copy of the data instead of putting into diff storage. but it must be a ptypy storage as input in coordinate_shift.
 # here I put the masked data in the data. for all frames. So this I need to keep before xrd analysis. (or make a new storage with masked data) 
-P.diff.storages.values()[0].data = P.diff.storages.values()[0].data * P.mask.storages.values()[0].data
+
+"""""""OBS CHANGING ROIT[40:100]  """
+P.diff.storages.values()[0].data = P.diff.storages.values()[0].data[:,:,40:100] * P.mask.storages.values()[0].data[:,40:100]
 
 
 test_shift_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.diff.storages.values()[0], input_space='reciprocal',
@@ -551,7 +557,7 @@ def XRD_analysis():
         for col in range(0,nbr_cols):
             
             # if keep_dims is False, shouldnt the axis qz change? (q1 -->qz)
-            data_orth_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.diff.storages.values()[0], input_space='reciprocal',
+            data_orth_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.diff.storages.values()[0][:,:,40:100], input_space='reciprocal',
                          input_system='natural', keep_dims=True,
                          layer=position_idx)         # layer is the first col in P.diff.storages.values()[0]
       
@@ -662,19 +668,24 @@ cutXat = nbr_cols+1 # 67
 # replace the x-scales end-postion in extent_motorposition. 
 extent_motorpos_cut = np.copy(extent_motorpos)
 ###extent_motorpos_cut[1] = 2.0194197798363955 segmentedNW
+cutXat = 58    #    68 (for ending at 2)
 
+extent_motorpos_cut = [start_cutXat, dx*(cutXat-1),0,dy*(nbr_rows-1)]
+print'mean value BF: '
+print np.mean(sum(brightfield))
 # create a mask from the BF matrix, for the RSM analysis
 XRD_mask = np.copy(sum(brightfield))
-XRD_mask[XRD_mask < 25000 ] = np.nan #inP 25000  #ingap?42000 81000   # for homo InP, use 280000
+XRD_mask[XRD_mask < 800 ] = np.nan #inP 25000  #ingap?42000 81000   # for homo InP, use 280000
 XRD_mask[XRD_mask > 0] = 1       #make binary, all values not none to 1
 
 # plot abs q to select pixels that are 'background', not on wire, and set these pixels to NaN (make them white)
-plt.figure()
+fig=plt.figure()
 #plt.suptitle(
 plt.subplot(411)
 plt.title('Summed up intensity (bright field)') #sum of all rotations
-plt.imshow(sum(brightfield[:,:,0:])/sum(brightfield).max(), cmap='jet', interpolation='none',extent=extent_motorpos)
+plt.imshow(sum(brightfield[:,:,start_cutXat:cutXat])/sum(brightfield[:,:,start_cutXat:cutXat]).max(), cmap='jet', interpolation='none',extent=extent_motorpos_cut)
 plt.ylabel('$y$ [$\mathrm{\mu}$m]')
+plt.xticks([])
 #po = plt.colorbar(ticks=(10,20,30,40))#,fraction=0.046, pad=0.04) 
 plt.colorbar()
 
@@ -695,18 +706,20 @@ mean_strain = np.nanmean(XRD_mask[:,start_cutXat:cutXat]*a_lattice_exp[:,start_c
 #TODO try with reference strain equal to the center of the largest segment (for InP) # tody try with reference from the other NWs
 #mean_strain = a_lattice_exp[:,start_cutXat:cutXat].max() 
 
-plt.imshow(100*XRD_mask[:,start_cutXat:cutXat]*(a_lattice_exp[:,start_cutXat:cutXat]-mean_strain)/mean_strain, cmap='jet',interpolation='none',extent=extent_motorpos_cut) # not correct!'
-#plt.imshow(XRD_mask[:,start_cutXat:cutXat]*a_lattice_exp[:,start_cutXat:cutXat], cmap='jet',interpolation='none',extent=extent_motorpos_cut) # not correct!'
+plt.imshow(100*XRD_mask[:,start_cutXat:cutXat]*(a_lattice_exp[:,start_cutXat:cutXat]-mean_strain)/mean_strain, cmap='jet',interpolation='none',extent=extent_motorpos_cut)
+#plt.imshow(XRD_mask[:,start_cutXat:cutXat]*a_lattice_exp[:,start_cutXat:cutXat], cmap='jet',interpolation='none',extent=extent_motorpos_cut) 
 #plt.title('Relative length of Q-vector |Q|-$Q_{mean}$ $(10^{-3}/\AA$)')
 plt.title('Strain $\epsilon$ (%)')
 #plt.title('Lattice constant a')
+plt.xticks([])
 plt.ylabel('$y$ [$\mathrm{\mu}$m]');plt.colorbar()   
 
 plt.subplot(413)
-plt.imshow(XRD_mask[:,start_cutXat:cutXat]*1E3*XRD_alpha[:,start_cutXat:cutXat], cmap='jet',interpolation='none')#,extent=extent_motorpos_cut) # not correct!
+plt.imshow(XRD_mask[:,start_cutXat:cutXat]*1E3*XRD_alpha[:,start_cutXat:cutXat], cmap='jet',interpolation='none',extent=extent_motorpos_cut) # not correct!
 # cut in extent_motorposition. x-pixel nbr 67 is at 2.0194197798363955
 plt.title('$\\alpha$ (mrad)')
 plt.ylabel('$y$ [$\mathrm{\mu}$m]')
+plt.xticks([])
 po = plt.colorbar()
 #po = plt.colorbar(ticks=(0,1,2,3,4))
 #po.set_label('Bending around $q_x$ $\degree$')
