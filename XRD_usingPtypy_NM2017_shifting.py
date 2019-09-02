@@ -34,30 +34,28 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from ptypy.experiment.nanomax3d import NanomaxBraggJune2017 # after update need to update spec ptyScan class
+from matplotlib import ticker
 
-# TODO
-# if InP
-#       choose InP roi and change name
 p = u.Param()
 p.run = 'XRD_29A_inP_realprobe'   # 'XRD_InP'
 
 #sample = 'JWX33_NW2'; scans = range(192, 200+1)+range(205, 222+1) #range(192, 195)# 
 #sample = 'JWX29A_NW1'; scans = [483,484,485] # ~~central rotations
-sample = 'JWX29A_NW1'; scans = [458,459,460,461,462]#,463,464,465,466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
-# obs temp list
-###sample = 'JWX29A_NW1'; scans = [470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500]
+sample = 'JWX29A_NW1'; scans = [458,459,460,461,462,463,464,465,466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
+# new scan list with few scans removed to increase roi
+scans = [458,                463,464,   466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
+scans = [                        464,   466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
+
+
+##random scans along rocking curve: take out every 3:rd scan
+#scans = [                        464,   466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481,482,483,484,485,486,519,488, 496,497,498, 499, 500, 501, 502, 503, 504, 505, 506,507, 508, 509, 510, 511, 512, 513, 514, 515]
+
+#sample = 'JWX29A_NW1'; scans = [458,459,460,461,462,463,464,465,466,467,468,469,470,471,518,473,474,475,476,477,478,479,480,481]
+
 p.data_type = "single"   #or "double"
 # for verbose output
 p.verbose_level = 1
 
-# use special plot layout for 3d data  (but the io.home part tells ptypy where to save recons and dumps)
-p.io = u.Param()
-p.io.home = './'
-p.io.autoplot = u.Param()
-p.io.autoplot.layout = 'bragg3d'
-p.io.autoplot.dump = True
-p.io.autoplot.interval=1
- 
 p.scans = u.Param()
 p.scans.scan01 = u.Param()
 p.scans.scan01.name = 'Bragg3dModel'
@@ -78,10 +76,10 @@ p.scans.scan01.data.theta_bragg = 11.0  # calibrated for homogeneous wires to 11
 raw_center = (190,190) # for InP in segmented NWs
 #raw_center = (256,256)
 # does not work with asymmetric
-p.scans.scan01.data.shape = (150,150)    #256 for homogeneous# needs to be an EVEN number for using shifting
+p.scans.scan01.data.shape = (150,150) #(150,150)    #256 for homogeneous# needs to be an EVEN number for using shifting
 p.scans.scan01.data.auto_center = False # 
 #TODO: fix orientation. should be 4 (transpose) and maybe som flippin flippin
-p.scans.scan01.data.orientation = None# 4
+p.scans.scan01.data.orientation = 4+1+2
 
 # ptypy says: Setting center for ROI from None to [ 75.60081158  86.26238307].   but that must be in the images that iI cut out from the detector
 detind0 = raw_center[0] - p.scans.scan01.data.shape[0]/2
@@ -107,8 +105,21 @@ p.scans.scan01.data.distance = 1.149 # =sqrt(1.065**2 + 0.43**2) is the distance
 ##TODO test with no shifting and compare result: [0]*51 #
 #TODO more is to do the automatic shifting for these scans!!
 
-p.scans.scan01.data.vertical_shift =  [-1,-1,0,0,0,  0,0,2,1,0,  1,1,1,0,-1,  -1,-1,-1,-1,0,  -1,-1,0,0,1,  1,-1,0,1,0,   2,0,0,1,1,  1,0,0,1,1,  1,2,2,2,4,  3,3,3,3,3,   3]
-p.scans.scan01.data.horizontal_shift =  [3,2,0,1,2,  3,4,3,4,5,  5,6,6,5,6,  5,4,7,8,8,  8,8,10,11,12,  11,12,12,11,12,  12,11,12,13,13,  14,15,14,14,14,  13,15,16,15,14,  17,19,18,18,17,   17]
+# old shifting list
+#p.scans.scan01.data.vertical_shift =  [-1,-1,0,0,0,  0,0,2,1,0,  1,1,1,0,-1,  -1,-1,-1,-1,0,  -1,-1,0,0,1,  1,-1,0,1,0,   2,0,0,1,1,  1,0,0,1,1,  1,2,2,2,4,  3,3,3,3,3,   3]
+#p.scans.scan01.data.horizontal_shift =  [3,2,0,1,2,  3,4,3,4,5,  5,6,6,5,6,  5,4,7,8,8,  8,8,10,11,12,  11,12,12,11,12,  12,11,12,13,13,  14,15,14,14,14,  13,15,16,15,14,  17,19,18,18,17,   17]
+
+# thest new smaller roi:
+#p.scans.scan01.data.vertical_shift =  [-1,       0,0   ,  1,0,  1,1,1,0,-1,  -1,-1,-1,-1,0,  -1,-1,0,0,1,  1,-1,0,1,0,   2,0,0,1,1,  1,0,0,1,1,  1,2,2,2,4,  3,3,3,3,3,   3]
+#p.scans.scan01.data.horizontal_shift =  [0,       0,1,    1,2,  2,3,3,2,3,  2,1,4,5,5,  5,5,7,8,9,  8,9,9,8,9,  9,8,9,10,10,  11,14,11,11,11,  10,12,13,12,11,  14,16,15,15,14,   14]
+
+
+p.scans.scan01.data.vertical_shift =  [              0 ,   1,0,  1,1,1,0,-1,  -1,-1,-1,-1,0,  -1,-1,0,0,1,  1,-1,0,1,0,   2,0,0,1,1,  1,0,0,1,1,  1,2,2,2,4,  3,3,3,3,3,   3]
+p.scans.scan01.data.horizontal_shift =  [           1,    1,2,  2,3,3,2,3,  2,1,4,5,5,  5,5,7,8,9,  8,9,9,8,9,  9,8,9,10,10,  11,12,11,11,11,  10,12,13,12,11,  14,15,14,14,13,   13]#,15,14,14,13,   13
+
+# should be 0 or 1?
+#p.scans.scan01.data.vertical_shift = [0] * len(scans) 
+#p.scans.scan01.data.horizontal_shift = [0] * len(scans) 
             # InGaP = [116:266,234:384]
             # InP = [116:266,80:230]
 #p.scans.scan01.data.detector_roi_indices = [116,266,80,230]  #[116,266,80,230]  #    # this one should not be needed since u have shape and center...
@@ -117,8 +128,8 @@ p.scans.scan01.data.horizontal_shift =  [3,2,0,1,2,  3,4,3,4,5,  5,6,6,5,6,  5,4
 # homogenius NWs
 ##############################################################################
 ## for not using shifts:            
-#p.scans.scan01.data.vertical_shift = [1] * len(scans) 
-#p.scans.scan01.data.horizontal_shift = [1] * len(scans) 
+#p.scans.scan01.data.vertical_shift = [0] * len(scans) 
+#p.scans.scan01.data.horizontal_shift = [0] * len(scans) 
 
 #            # referens ska vara 0, alla andra -
 #            #open this file
@@ -131,37 +142,6 @@ p.scans.scan01.data.horizontal_shift =  [3,2,0,1,2,  3,4,3,4,5,  5,6,6,5,6,  5,4
 # TODO is this what I should use, or the list in the prev. row?            
 #p.scans.scan01.data.vertical_shift = [ 0, 0, 1, 2, 2, 2, 3, 3, 3, 1, 0, 0, 0, 0, 0, -2, -2, -2, -3, -3, -2, -2,  -3, -2, -3, -3,  -4]
 #p.scans.scan01.data.horizontal_shift = [ -8, -8, -8, -8, -8, -3, -2, -4, 0, -5, -3, -6, -3, -6, -3, -5, -5, -7, -4,  -7, -3, -6, -2, -7, -2, -6, -3 ] 
-
-###############################################################################
-
-p.scans.scan01.illumination = u.Param()
-#p.scans.scan01.illumination.diversity = u.Param() #not working but default is none#None #to avoid rescaling issues with probe
-p.scans.scan01.illumination.model = 'recon'
-p.scans.scan01.illumination.recon = u.Param()
-#p.scans.scan01.illumination.recon.label = 'scan10probe'
-p.scans.scan01.illumination.recon.rfile = 'C:/Users/Sanna/Documents/beamtime/NanoMAX062017/Analysis_ptypy/nice_probe_ptyrfiles/scan10/scan10_pilatus_ML.ptyr'
-p.scans.scan01.illumination.photons = None
-
-#ID = "S00G00"
-#p.scans.scan01.illumination.recon.layer = None
-
-#p.scans.scan01.illumination.aperture = u.Param() 
-#p.scans.scan01.illumination.aperture.form = 'circ'
-#p.scans.scan01.illumination.aperture.size = 100e-9 
-#p.scans.scan01.sample = u.Param()
-#p.scans.scan01.sample.fill = 1e-3
-
-p.engines = u.Param()
-p.engines.engine00 = u.Param()
-p.engines.engine00.name = 'DM_3dBragg'    #Not 'DM_3dBragg' ? DM
-p.engines.engine00.numiter = 20
-p.engines.engine00.probe_update_start = 100000
-p.engines.engine00.numiter_contiguous = 1 # think this is how often you want to save
-#TODO look at these!
-p.engines.engine00.probe_support = None   #get an error without these 
-p.engines.engine00.sample_support = None
-#p.engines.engine00.sample_support.type = 'rod'
-
 
 # prepare and run
 P = Ptycho(p,level=2)
@@ -233,7 +213,8 @@ extent_motorpos = [ 0, dx*(nbr_cols-1),0, dy*(nbr_rows-1)]
 # save masked diffraction patterns
 # in diff data the rotations are sorted according to gonphi, starting with the LOWEST GONPHI which is the reversed of theta. Hence, diff_data[0] is is theta=12.16 and scan=222 
 "                342433243222"
-diff_data = P.diff.storages.values()[0].data[:,:,40:100]*P.mask.storages.values()[0].data[0][:,40:100]
+diff_data = P.diff.storages.values()[0].data*P.mask.storages.values()[0].data[0]
+#diff_data = P.diff.storages.values()[0].data[:,:,40:100]*P.mask.storages.values()[0].data[0][:,40:100]
 # or load a single pod P.pods['P0896'].diff
 #access the grid of the diff storage
 #TODO
@@ -266,6 +247,7 @@ plt.figure()
 plt.imshow(np.log10(sum(((diff_data[0:,plot_rotation])))), interpolation='none')
 plt.title('Summed intensity for all rotations for scan %d (log)'%scans_sorted_theta[plot_rotation][2])
 
+#%%
 # ---------------------------------------------------------
 # Do bright field analysis
 #-----------------------------------------------------------
@@ -288,15 +270,16 @@ for jj in range(0,len(scans)):
 
 
 def plot_bright_field():
-    interval=50 #plotting interval
+    interval=100 #plotting interval
     #plot every something 2d bright fields
     for ii in range(0,len(scans),interval):
         plt.figure()
-        plt.imshow(brightfield[ii], cmap='gray', interpolation='none', extent=extent_motorpos) 
+        plt.imshow(np.log10(brightfield[ii]), cmap='jet', interpolation='none', extent=extent_motorpos, vmin=0, vmax=5 ) 
         plt.title('Bright field sorted in gonphi %d'%scans_sorted_theta[ii][2])  
         plt.xlabel('$x$ [$\mathrm{\mu m}$]') 
-        plt.ylabel('$y$ [$\mathrm{\mu m}$]') 
-        #plt.savefig('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\ptycho_192_222\BF_Merlin_hor_ver_aligned\\scan%d'%((scans[ii])), bbox_inches='tight')
+        plt.ylabel('$y$ [$\mathrm{\mu m}$]') ; plt.colorbar()
+        ##plt.savefig('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\ptycho_192_222\BF_Merlin\\scan%d'%((scans[ii])), bbox_inches='tight')
+        #plt.savefig('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\scan461_\BF\BF_merlin_aligned3\\log10_scan%d'%((scans_sorted_theta[ii][2])), bbox_inches='tight')
         #plt.savefig("BF/scan%d"%scans_gonphi[ii])   
     # plot average bright field image (average over rotation)
     plt.figure()
@@ -304,7 +287,7 @@ def plot_bright_field():
     plt.title('Average image from bright field') 
     plt.xlabel('$x$ [$\mathrm{\mu m}$]') 
     plt.ylabel('$y$ [$\mathrm{\mu m}$]') 
-    #plt.savefig("BF/Average_brightfield")     
+    #plt.savefig("C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\scan461_\BF\BF_merlin_aligned3\\Average_brightfield", bbox_inches='tight')     
     
     plt.figure()
     plt.imshow(sum(brightfield), cmap='jet', interpolation='none',extent=extent_motorpos)
@@ -315,6 +298,64 @@ plot_bright_field()
 
 
 #%%
+# COM analysis
+#-----------------------
+
+def COM2d(data,nbr_cols,nbr_rows):
+    
+    index = 0
+    # define a vector with length of the length of roi on the detector
+    roix = np.linspace(1, data.shape[1], data.shape[1])
+    ## define a vector with length of the height of roi on the detector
+    roiy = np.linspace(1,data.shape[2],data.shape[2])     #shape 1 or 2 ?
+    # meshgrids for center of mass calculations
+    X, Y = np.meshgrid(roix,roiy)
+    
+    COM_hor = np.zeros((nbr_rows,nbr_cols))
+    COM_ver = np.zeros((nbr_rows,nbr_cols))
+    COM_mag = np.zeros((nbr_rows,nbr_cols))
+    COM_ang = np.zeros((nbr_rows,nbr_cols))
+    
+    for row in range(0,nbr_rows):
+        for col in range(0,nbr_cols):
+            COM_hor[row,col] = sum(sum(data[index]*X))/sum(sum(data[index]))
+            COM_ver[row,col] = sum(sum(data[index]*Y))/sum(sum(data[index]))
+            if row == 0 and col == 0:
+                bkg_hor = 0#152.4#COM_hor[row,col] 
+                bkg_ver = 0#101.8#COM_ver[row,col] 
+                        # DPC in polar coordinates. r then phi:
+            COM_mag[row, col] = np.sqrt( (COM_hor[row,col]-bkg_hor)**2 + (COM_ver[row,col]-bkg_ver)**2) 
+     #       COM_ver(row_ROI(1):row_idx, col_ROI(1):col_ROI(end),scan_idx)-mean(mean(COM_ver(row_ROI(1):row_idx,col_ROI(1):col_ROI(end),scan_idx))))
+    #[COM_angle(row_ROI(1):row_idx, col_ROI(1):col_ROI(end),scan_idx), COM_magnitude(row_ROI(1):row_idx,col_ROI(1):col_ROI(end),scan_idx)] = cart2pol(COM_hor(row_ROI(1):row_idx,nbr:cols,scan_idx)-mean(mean(COM_hor(row_ROI(1):row_idx,col_ROI(1):col_ROI(end),scan_idx))), grej        
+            COM_ang[row, col] = np.arctan( COM_hor[row,col] / COM_ver[row,col])
+       #     COM_hor_tmp(col) = sum(sum(image_dat(roiy,roix).*X))/sum(sum(image_dat(roiy,roix)));
+       #     COM_ver_tmp(col) = sum(sum(image_dat(roiy,roix).*Y))/sum(sum(image_dat(roiy,roix)));
+            index += 1 
+    return COM_mag
+
+# do BF for all rotations
+COM_2d = np.zeros((len(scans), nbr_rows, nbr_cols))
+for jj in range(0,len(scans)):
+    COM_2d[jj] = COM2d(diff_data[:,jj,:,:],nbr_cols,nbr_rows)
+    #Normalize each image ( so that i can plot a better 3D image)
+    #brightfield[jj] = brightfield[jj] / brightfield[jj].max()
+
+def plot_COM2d():
+    interval=1 #plotting interval
+    #plot every something 2d bright fields
+    for ii in range(0,len(scans),interval):
+        plt.figure()
+        plt.imshow(COM_2d[ii], cmap='jet', interpolation='none', extent=extent_motorpos) 
+        plt.title('COM 2d mag %d'%scans_sorted_theta[ii][2])  
+        plt.xlabel('$x$ [$\mathrm{\mu m}$]') 
+        plt.ylabel('$y$ [$\mathrm{\mu m}$]') 
+        #plt.savefig('C:\Users\Sanna\Documents\Beamtime\NanoMAX062017\Analysis_ptypy\scan461_\COM\COM_merlin_aligned\InP\\scan%d'%((scans_sorted_theta[ii][2])), bbox_inches='tight')
+        #plt.savefig("BF/scan%d"%scans_gonphi[ii])   
+    # plot average bright field image (average over rotation)
+plot_COM2d()
+
+#%%
+
 """
 # Try to deconvolve the probe size from the BF signal (make a vertical line 
 # scan and deconvolve with square function of size 170 nm which should be the real diamter )
@@ -357,6 +398,7 @@ def imshow(data):
     plt.imshow(data, cmap='jet')
     plt.colorbar()
 #%%    
+#  corrected 20190822  
 # define q1 q2 q3 + q_abs from the geometry function 
 # (See "Bending and tilts in NW..." pp)
 def def_q_vectors():
@@ -364,10 +406,10 @@ def def_q_vectors():
     #  units of reciprocal meters [m-1]
     q_abs = 4 * np.pi / g.lam * g.sintheta
     # (x, z, y),  (r3, r1, r2), (qx, qz, qy), or (q3, q1, q2),
-    q1 = np.linspace(-g.dq1*g.shape[1]/2.+q_abs/g.costheta, g.dq1*g.shape[1]/2.+q_abs/g.costheta, g.shape[1]) #        ~z
+    q1 = np.linspace(-g.dq1*diff_data.shape[2]/2.+q_abs/g.costheta, g.dq1*diff_data.shape[2]/2.+q_abs/g.costheta, diff_data.shape[2]) #        ~z
     # q3 defined as centered around 0, that means adding the component from q1
-    q3 = np.linspace(-g.dq3*g.shape[0]/2. + g.sintheta*q1.min() , g.dq3*g.shape[0]/2.+ g.sintheta*q1.max(), g.shape[0]) #~x
-    q2 = np.linspace(-g.dq2*g.shape[2]/2., g.dq2*g.shape[2]/2., g.shape[2]) #         ~y
+    q3 = np.linspace(-g.dq3*diff_data.shape[1]/2. + g.sintheta*q1.min() , g.dq3*diff_data.shape[1]/2.+ g.sintheta*q1.max(), diff_data.shape[1]) #~x
+    q2 = np.linspace(-g.dq2*diff_data.shape[3]/2., g.dq2*diff_data.shape[3]/2., diff_data.shape[3]) #         ~y
 def_q_vectors()
 #%%
 
@@ -392,27 +434,28 @@ vilket storage har grid i reciproca rummet?
 
 # in the transformation is should be input and output: (qx, qz, qy), or (q3, q1, q2).
 # make q-vectors into a tuple to transform to the orthogonal system; Large Q means meshgrid, small means vector
-Q3,Q2,Q1 = np.meshgrid(q3, q2, q1, indexing='ij') 
+#Q3,Q2,Q1 = np.meshgrid(q3, q2, q1, indexing='ij') 
+
+Q3,Q1,Q2 = np.meshgrid(q3, q1, q2, indexing='ij') 
 
 plt.figure()
-
 plt.subplot(311)
 plt.imshow(Q1[1])
-plt.title('Q1')
+plt.title('Q1', loc='left', pad =-15)
 plt.colorbar()
 
 plt.subplot(312)
-plt.title('Q2')
+plt.title('Q2', loc='left', pad =-15)
 plt.imshow(Q2[1])
 plt.colorbar()
 
 plt.subplot(313)
-plt.title('Q3')
+plt.title('Q3', loc='left', pad =-15)
 plt.imshow(Q3[1])
 plt.colorbar()
 
 plt.figure()
-plt.title('Q3[:,:,0]')
+plt.title('Q3[:,:,0]', loc='left', pad =-15)
 plt.imshow(Q3[:,:,0])
 plt.colorbar()
 
@@ -422,26 +465,26 @@ Qx, Qz, Qy = g.transformed_grid(tup, input_space='reciprocal', input_system='nat
 
 
 plt.figure()
-
 plt.subplot(311)
 plt.imshow(Qz[1])
-plt.title('Qz')
+plt.title('Qz', loc='left', pad =-15)
 plt.colorbar()
 
 plt.subplot(312)
-plt.title('Qy')
+plt.title('Qy', loc='left', pad =-15)
 plt.imshow(Qy[1])
 plt.colorbar()
 
 plt.subplot(313)
-plt.title('Qx')
+plt.title('Qx', loc='left', pad =-15)
 plt.imshow(Qx[1])
 plt.colorbar()
 
-#corrected?
+#NOOOOOOOOOOOOOOOOOOOOOOOOOOOOOTTTTTTTTTTTTTTTTTTTTTTTTTCORECCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCTTTTT
 qx = np.linspace(Qx.min(),Qx.max(),g.shape[0])
-qz = np.linspace(Qz.max(),Qz.min(),g.shape[2])
-qy = np.linspace(Qy[0,0,0],Qy[0,-1,0],g.shape[1])
+qz = np.linspace(Qz.max(),Qz.min(),g.shape[1])
+qy = np.linspace(Qy.max(),Qy.min(),g.shape[2])
+#qy = np.linspace(Qy[0,0,0],Qy[0,-1,0],g.shape[1])
 
 #-----------------------------------------------------------------------------    
 # Find max scattering position and plot that positions 3d bragg peak in 2d cuts 
@@ -451,6 +494,8 @@ qy = np.linspace(Qy[0,0,0],Qy[0,-1,0],g.shape[1])
 # test trying to skew the system (the diff data) from the measurement coordinate system q3q1q2 (in reciprocal space)
 # to the orthogonal reciprocal space qxqzqy with the help of the ptypy class coordinate_shift in geometry_class.py 
 # (qxqzqy is what ptypy calls it, not Berenguer which has no name for it)
+
+"# COrrected 20190822"
 #------------------------------------------------------------------------------
 
 # check which positions has the most intensity, for a nice 3d Bragg peak plot
@@ -459,13 +504,14 @@ max_pos_naive = np.argmax(pos_vect_naive)
 #max_pos_naive = 524# 512for 80 segment#524 for 170 segment
 
 # find where the peak is in the detector plane
-q2max = np.argmax(np.sum(sum(diff_data[max_pos_naive]),axis=0))
-q1max = np.argmax(np.sum(sum(diff_data[max_pos_naive]),axis=1))
+q3max = np.argmax(np.sum(np.sum(diff_data[max_pos_naive],axis=1),axis=1))
+q2max = np.argmax(np.sum(sum(diff_data[max_pos_naive]),axis=1))
+q1max = np.argmax(np.sum(sum(diff_data[max_pos_naive]),axis=0))
     
 
 # save one bragg peak to plot. set 0 values to inf   
 plot_3d_naive = np.copy(diff_data[max_pos_naive])
-#plot_3d_naive[plot_3d_naive==0] = np.inf
+plot_3d_naive[plot_3d_naive==0] = np.inf
 
 # plot the 'naive' 3d peak of the most diffracting position, and centered on the peak for q1 and q2 
 factor = 1E-10 
@@ -473,28 +519,26 @@ plt.figure()
 plt.suptitle('Naive plot of single position Bragg peak in natural coord system')
 plt.subplot(221)
 # extent (left, right, bottom, top) in data coordinates
-plt.imshow(plot_3d_naive[len(scans)/2], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q2[-1]*factor, q2[0]*factor])
-plt.ylabel('$q_2$ $ (\AA ^{-1}$)') ; plt.colorbar()
-plt.xlabel('$q_1$ $ (\AA ^{-1}$)')   
+plt.imshow(plot_3d_naive[q3max], cmap='jet', interpolation='none', extent=[q2[0]*factor, q2[-1]*factor, q1[-1]*factor, q1[0]*factor])
+plt.ylabel('$q_1$ $ (\AA ^{-1}$)') ; plt.colorbar()
+plt.xlabel('$q_2$ $ (\AA ^{-1}$)')   
 
 plt.subplot(222)
-plt.imshow(plot_3d_naive[:,q2max,:], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q3[-1]*factor, q3[0]*factor])
-plt.ylabel('$q_3$ $ (\AA ^{-1}$)'); plt.colorbar()
-plt.xlabel('$q_1$ $ (\AA ^{-1}$)') 
-plt.subplot(223)
-plt.imshow(plot_3d_naive[:,:,q1max], cmap='jet', interpolation='none', extent=[q2[0]*factor, q2[-1]*factor, q3[-1]*factor, q3[0]*factor])
+plt.imshow(plot_3d_naive[:,q1max,:], cmap='jet', interpolation='none', extent=[q2[0]*factor, q2[-1]*factor, q3[-1]*factor, q3[0]*factor])
 plt.ylabel('$q_3$ $ (\AA ^{-1}$)'); plt.colorbar() 
 plt.xlabel('$q_2$ $ (\AA ^{-1}$)') 
 
+plt.subplot(223)
+plt.imshow(plot_3d_naive[:,:,q2max], cmap='jet', interpolation='none', extent=[q1[0]*factor, q1[-1]*factor, q3[-1]*factor, q3[0]*factor])
+plt.ylabel('$q_3$ $ (\AA ^{-1}$)'); plt.colorbar()
+plt.xlabel('$q_1$ $ (\AA ^{-1}$)') 
 
 
 #TODO make a copy of the data instead of putting into diff storage. but it must be a ptypy storage as input in coordinate_shift.
 # here I put the masked data in the data. for all frames. So this I need to keep before xrd analysis. (or make a new storage with masked data) 
+P.diff.storages.values()[0].data = P.diff.storages.values()[0].data * P.mask.storages.values()[0].data
 
-"""""""OBS CHANGING ROIT[40:100]  """
-P.diff.storages.values()[0].data = P.diff.storages.values()[0].data[:,:,40:100] * P.mask.storages.values()[0].data[:,40:100]
-
-
+# test the shifting and plot
 test_shift_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.diff.storages.values()[0], input_space='reciprocal',
                          input_system='natural', keep_dims=True,
                          layer=max_pos_naive)
@@ -503,26 +547,24 @@ test_shift_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.dif
 # TODO : make a scatter plot instead tp check that all axis are correct, make it more visible. 
 #but remember that the data is fluipped in qx(rot)axis here
 
-#test_shift_coord.data[0][test_shift_coord.data[0]==0] = np.inf    
+test_shift_coord.data[0][test_shift_coord.data[0]==0] = np.inf    
 factor = 1E-10  #if you want to plot in reciprocal m or Angstroms, user 1 or 1E-10
 plt.figure()
 plt.suptitle('Single position Bragg peak in orthogonal system \n (Berenguer terminology) qxqzqy')
 plt.subplot(221)
-plt.imshow(test_shift_coord.data[0][len(scans)/2], cmap='jet', interpolation='none', extent=[qz[0]*factor, qz[-1]*factor, qy[-1]*factor, qy[0]*factor])
-plt.ylabel('$q_y$ $ (\AA ^{-1}$)');  plt.colorbar()
-plt.xlabel('$q_z$ $ (\AA ^{-1}$)')   
+plt.imshow(test_shift_coord.data[0][q3max], cmap='jet', interpolation='none', extent=[qy[0]*factor, qy[-1]*factor, qz[-1]*factor, qz[0]*factor])
+plt.ylabel('$q_z$ $ (\AA ^{-1}$)');  plt.colorbar()
+plt.xlabel('$-q_y$ $ (\AA ^{-1}$)')   
 
 plt.subplot(222)
-# should be x angainst y in these labels
-plt.imshow(test_shift_coord.data[0][:,q2max,:], cmap='jet', interpolation='none', extent=[qz[0]*factor, qz[-1]*factor, qx[-1]*factor, qx[0]*factor])
-plt.ylabel('$q_x$ $ (\AA ^{-1}$)'); plt.colorbar()
-plt.xlabel('$q_z$ $ (\AA ^{-1}$)')   
-
-plt.subplot(223)
-plt.imshow(test_shift_coord.data[0][:,:,q1max], cmap='jet', interpolation='none', extent=[qy[0]*factor, qy[-1]*factor, qx[-1]*factor, qx[0]*factor])
+plt.imshow(test_shift_coord.data[0][:,q1max,:], cmap='jet', interpolation='none', extent=[qy[0]*factor, qy[-1]*factor, qx[-1]*factor, qx[0]*factor])
 plt.ylabel('$q_x$ $ (\AA ^{-1}$)'); plt.colorbar()
 plt.xlabel('$q_y$ $ (\AA ^{-1}$)') 
 
+plt.subplot(223)
+plt.imshow(test_shift_coord.data[0][:,:,q2max], cmap='jet', interpolation='none', extent=[qz[0]*factor, qz[-1]*factor, qx[-1]*factor, qx[0]*factor])
+plt.ylabel('$q_x$ $ (\AA ^{-1}$)'); plt.colorbar()
+plt.xlabel('$q_z$ $ (\AA ^{-1}$)')   
 # x,y,z    # så jag har det
 #3,2,1
 
@@ -557,7 +599,7 @@ def XRD_analysis():
         for col in range(0,nbr_cols):
             
             # if keep_dims is False, shouldnt the axis qz change? (q1 -->qz)
-            data_orth_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.diff.storages.values()[0][:,:,40:100], input_space='reciprocal',
+            data_orth_coord = ptypy.core.geometry_bragg.Geo_Bragg.coordinate_shift(g, P.diff.storages.values()[0], input_space='reciprocal',
                          input_system='natural', keep_dims=True,
                          layer=position_idx)         # layer is the first col in P.diff.storages.values()[0]
       
@@ -568,7 +610,8 @@ def XRD_analysis():
             
             # do the 3d COM analysis to find the orthogonal reciprocal space coordinates of each Bragg peak
             # IMPORTATNE rotations are sorted with gonphi but for this to be correct with the coordinate system the 
-            # data should sorted with higher index = higher theta that why I fli the order here. The plots before are not correct
+            # data should sorted with higher index = higher theta that why I fli the order here. The data in diff data are not sorted correct in qx
+            
             COM_qx, COM_qz, COM_qy = COM_voxels_reciproc(data_orth_coord.data[0][::-1,:,:], Qx, Qz, Qy)
 
             # insert coordinate in reciprocal space maps 
@@ -668,36 +711,41 @@ cutXat = nbr_cols+1 # 67
 # replace the x-scales end-postion in extent_motorposition. 
 extent_motorpos_cut = np.copy(extent_motorpos)
 ###extent_motorpos_cut[1] = 2.0194197798363955 segmentedNW
-cutXat = 58    #    68 (for ending at 2)
+cutXat = 60    #    68 (for ending at 2)
 
 extent_motorpos_cut = [start_cutXat, dx*(cutXat-1),0,dy*(nbr_rows-1)]
 print'mean value BF: '
 print np.mean(sum(brightfield))
 # create a mask from the BF matrix, for the RSM analysis
 XRD_mask = np.copy(sum(brightfield))
-XRD_mask[XRD_mask < 800 ] = np.nan #inP 25000  #ingap?42000 81000   # for homo InP, use 280000
+#XRD_mask[XRD_mask < 42000 ] = np.nan #inP 25000  #ingap?42000 81000   # for homo InP, use 280000
+XRD_mask[XRD_mask < 13000 ] = np.nan #inP 25000  #ingap?42000 81000   # for homo InP, use 280000
 XRD_mask[XRD_mask > 0] = 1       #make binary, all values not none to 1
 
 # plot abs q to select pixels that are 'background', not on wire, and set these pixels to NaN (make them white)
 fig=plt.figure()
 #plt.suptitle(
+plt.subplots_adjust(left=None, bottom=None, right=None, top=None, wspace=None, hspace=0.02)
 plt.subplot(411)
-plt.title('Summed up intensity (bright field)') #sum of all rotations
+
+plt.title('Summed up intensity', loc='left', pad =-15)
 plt.imshow(sum(brightfield[:,:,start_cutXat:cutXat])/sum(brightfield[:,:,start_cutXat:cutXat]).max(), cmap='jet', interpolation='none',extent=extent_motorpos_cut)
 plt.ylabel('$y$ [$\mathrm{\mu}$m]')
 plt.xticks([])
 #po = plt.colorbar(ticks=(10,20,30,40))#,fraction=0.046, pad=0.04) 
-plt.colorbar()
+po = plt.colorbar()
+tick_locator = ticker.MaxNLocator(nbins=4); po.locator = tick_locator;po.update_ticks()
 
 
 # if you want no mask use:
 #XRD_mask = np.ones((XRD_mask.shape))
 
+
 plt.subplot(412)   
 #calculate lattice constant a from |q|:       
 # TODO: this is wrong for the homogenous wires, its not (111), for segmented InP i dont know    
 d =  2*np.pi/  XRD_absq
-a_lattice_exp = d * np.sqrt(3)               
+a_lattice_exp = d * np.sqrt(3)                
 #a_lattice_exp = np.pi*2./ (XRD_absq *np.sqrt(3))
 #print 'mean lattice constant is %d' %np.mean(a_lattice_exp)
 #imshow(a_lattice_exp)
@@ -709,27 +757,34 @@ mean_strain = np.nanmean(XRD_mask[:,start_cutXat:cutXat]*a_lattice_exp[:,start_c
 plt.imshow(100*XRD_mask[:,start_cutXat:cutXat]*(a_lattice_exp[:,start_cutXat:cutXat]-mean_strain)/mean_strain, cmap='jet',interpolation='none',extent=extent_motorpos_cut)
 #plt.imshow(XRD_mask[:,start_cutXat:cutXat]*a_lattice_exp[:,start_cutXat:cutXat], cmap='jet',interpolation='none',extent=extent_motorpos_cut) 
 #plt.title('Relative length of Q-vector |Q|-$Q_{mean}$ $(10^{-3}/\AA$)')
-plt.title('Strain $\epsilon$ (%)')
-#plt.title('Lattice constant a')
+plt.title('(111) Strain $\epsilon$ (%)', loc='left', pad =-15)   #plt.title('Lattice constant a')
+plt.ylabel('$y$ [$\mathrm{\mu}$m]')  
 plt.xticks([])
-plt.ylabel('$y$ [$\mathrm{\mu}$m]');plt.colorbar()   
+po = plt.colorbar()
+tick_locator = ticker.MaxNLocator(nbins=4); po.locator = tick_locator;po.update_ticks()
 
 plt.subplot(413)
 plt.imshow(XRD_mask[:,start_cutXat:cutXat]*1E3*XRD_alpha[:,start_cutXat:cutXat], cmap='jet',interpolation='none',extent=extent_motorpos_cut) # not correct!
 # cut in extent_motorposition. x-pixel nbr 67 is at 2.0194197798363955
-plt.title('$\\alpha$ (mrad)')
+plt.title('$\\alpha$ (mrad)', loc='left', pad =-15)
 plt.ylabel('$y$ [$\mathrm{\mu}$m]')
 plt.xticks([])
 po = plt.colorbar()
+tick_locator = ticker.MaxNLocator(nbins=4); po.locator = tick_locator;po.update_ticks()
+
 #po = plt.colorbar(ticks=(0,1,2,3,4))
 #po.set_label('Bending around $q_x$ $\degree$')
    
 plt.subplot(414)
 plt.imshow(XRD_mask[:,start_cutXat:cutXat]*1E3*XRD_beta[:,start_cutXat:cutXat], cmap='jet',interpolation='none',extent=extent_motorpos_cut) # not correct!
-plt.title('$\\beta$ (mrad)')
+plt.title('$\\beta$ (mrad)', loc='left', pad =-15)
 plt.ylabel('$y$ [$\mathrm{\mu}$m]')
 plt.xlabel('$x$ [$\mathrm{\mu m}$]') 
 po = plt.colorbar()
+tick_locator = ticker.MaxNLocator(nbins=4); po.locator = tick_locator;po.update_ticks()
+
+
+
 #po = plt.colorbar(ticks=(5, 10, 15 ))
 #po.set_label('Bending around $q_y$ $\degree$')
 #plot_XRD_polar()
@@ -775,14 +830,23 @@ def rocking_curve_plot():
     # find highest intensity point
     alla = np.sum(np.sum(np.sum(diff_data,axis=1),axis=1),axis=1)
     index_max = np.argmax(alla)
+    
+    index_80 = 87*7+24
+    index_45 = 87*7+12
+    index_19 = 87*8+4
+    # intensity np.sum(diff_data[87*7+12])
+    
+    #which rocking curve do u want to plot:
+    index = index_19
+    
     #theta = np.linspace(12.1,13.1,51    # dthetea =0.02   
-    plt.figure(); plt.plot((np.sum(np.sum(diff_data[index_max],axis=1),axis=1)))
+    plt.figure(); plt.plot((np.sum(np.sum(diff_data[index],axis=1),axis=1)))
     plt.yscale('log')
-    plt.title('Rocking curve at highest-intensity point')
+    plt.title('Rocking curve at 19nm segment')
     
     plt.ylabel('Photon counts');plt.xlabel('Rotation $\Theta$ ($\degree$)')
     plt.grid(True)
-#rocking_curve_plot()
+rocking_curve_plot()
  
 #    
 ################################################################################
@@ -801,10 +865,6 @@ def rocking_curve_plot():
 #plt.plot(pos_vect)
 #plt.title('Summed intensity as a function of position')
 ##plt.savefig('SumI_vs_position')
-#
-#plt.figure()
-#plt.imshow(diff_data[max_pos,5], cmap='jet')
-#plt.title('InP Bragg peak projection')
 #
 #
 ## plot this position:
